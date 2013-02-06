@@ -1,0 +1,95 @@
+//asdfsaf
+/*asdff*/ 
+#use "Test2.c0"
+#use "Test.java"
+//sadf
+    /**#*
+     ***/
+bool is_unique(string[] A, int n)
+//@requires 0 <= n && n < \length(A);
+//@requires is_sorted(A, 0, n);
+{
+    //as the incoming array must be sorted as a requirement,
+    //it is logical to just test the neighboring strings 
+    //against one another to see if they are the same, as 
+    //same strings will be neighbors in a sorted string array.
+    for(int i = 0; i < n-1;)
+    //@loop_invariant i >=0 && i < n;
+    {
+        if(string_equal(A[i], A[++i])) return false;
+    }
+    return true;
+}
+/************************************************
+ *##############################################*
+ *#                                            #*
+ *# This function returns the number of unique #*
+ *# strings in the array A.                    #*
+ *#                                            #*
+ *# A is the string array                      #*
+ *#                                            #*
+ *# n is the length of the string array A      #*
+ *#                                            #*
+ *##############################################*
+ ************************************************/
+int count_unique(string[] A, int n)
+//@requires 0 <= n && n <= \length(A);
+//@requires is_sorted(A, 0, n);
+//@ensures \result >= 0;
+{
+    int non_unique = 0;
+    //as the incoming array must be sorted as a requirement,
+    //it is logical to just test the neighboring strings 
+    //against one another to see if they are the same, as 
+    //same strings will be neighbors in a sorted string array.
+    for(int i = 0; i < n-1;)
+    //@loop_invariant i >=0 && i < n;
+    {
+        if(string_equal(A[i], A[++i])) non_unique++;
+    }
+    return (n - non_unique);
+}
+struct hello;
+struct dddd;
+
+struct sadf{
+    int ffff;
+    bool* b;
+};
+struct hell s(){
+}
+struct hell* s(){
+}
+boolean b(struct s1 a, struct s1* b){
+}
+typedef a b;
+typedef c d;
+hello?
+struct no{
+    int ffff;
+    bool* b;
+};
+/************************************************
+ *##############################################*
+ *#                                            #*
+ *# This function returns a new array that     #*
+ *# contains only one distinct copy of of each #*
+ *# string in the array A. The new array       #*
+ *# should be sorted as well.                  #*
+ *#                                            #*
+ *# A is the string array                      #*
+ *#                                            #*
+ *# n is the length of the array A             #*
+ *#                                            #*
+ *##############################################*
+ ************************************************/
+string[] remove_duplicates(string[] A, int n)
+//@requires 0 <= n && n <= \length(A);
+//@requires is_sorted(A, 0 , n);
+//@ensures \length(\result) >= 0;
+//@ensures is_unique(\result, \length(\result));
+//@ensures count_unique(\result, \length(\result)) == 0;
+//@ensures is_sorted(\result, 0, \length(\result));
+{
+    
+}

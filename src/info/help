@@ -1,0 +1,35 @@
+about:
+    the J0VM is a compiler of C0 code to java bytecode, in order to increase 
+    the fluidity of distribution of C0 code.
+
+    In order to run the J0VM make sure you have java and javac installed on 
+    your computer.
+
+    The compiler works the same way as CC0 for basic compiling, with a few
+    exceptions.
+
+usage:
+     java C0Compiler {[-d], [-o <file>], [-x], <c0file...>}
+     java C0Compiler {[-V], [-h]}
+where 
+    "{}" represents an unordered set
+    "[]" represents an optional argument
+    "<>" represents a token following an argument.
+ 
+Current supported operations:
+     -h            --help           [displays help massage]
+     -d            --dyn-check      [dynamically check contracts]
+     -V            --version        [prints out the version of the j0vm]
+     -o <file>     --output=<file>  [sets the output path]
+     -x            --exec           [executes the function after compilation] 
+ 
+Current unsupported operations:
+     -v            --verbose        [verbose status and error messages]
+     --dump-ast                     [pretty print (?) the program's abstract syntax tree]
+     -s            --save-files     [produce .c and .h files]
+     -r <rt>       --runtime=<rt>   [select a runtime]
+     -O <opt>      --optimize=<opt> [Optimize (?) to level <opt>]
+     -l <lib>      --library=<lib>  [load the library <lib>]
+     -L <dir>                       [add <dir> to the search path for libraries]
+     -b            --bytecode       [generate bytecode (this generates bytecode, silly!)]
+     -n            --no-log         [disable logging for this compile]

@@ -1,0 +1,1166 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package compl.etc;
+
+import com.kieda.data_structures.Queue;
+import com.kieda.data_structures.Stack;
+import com.kieda.data_structures.StackSet;
+import com.kieda.data_structures.Trie;
+import compl.data.FileManip;
+import java.io.File;
+import java.util.*;
+
+/**
+ * C0 to java compiler.
+ * 
+ * NOTE: interfaces.
+ * 
+ * @author kieda
+ */
+public class CompileC0 {
+    static File source_root;
+    
+    static HashMap<String, C0TypeDef> typedefs;
+    
+    static HashSet<String> reserved_words;
+    
+    static Stack<Point> pointers_to_be_loaded;
+    
+    static HashMap<String, C0Interface> interfaces;
+    
+    //at the moment, I won't include polymorphism due to C0's restrictions.
+    static Trie<C0Method> methods;//placed by the method name
+    static ArrayList<C0Method> bad_methods;
+        //methods with the same name. done so we can continue analysis.
+    
+    static Trie<C0Struct> structs;//placed by the struct name
+    
+    //or maybe a hashmap from the name of the method to the output?
+    
+    static StackSet<C0Variable> local_data;
+        //the data stored in the local {syntax}. Basically, the names the 
+        //data holds, and the type of the data.
+        //used to ensure that there are no name conflicts, and that the data 
+        //under the name being used will be of the correct data type.
+    static FileManip current_file;
+    
+    
+    
+    //for native imports, we just add the value inside the #use<____> as a 
+    //HashSet of integers (the masks)
+    //we import them later by coffee
+    private static HashSet<Integer> native_imports;
+    
+    //import by literally copying and pasting the code from the file. 
+    //user_imports is a list of things we've imported, so we won't have multiple 
+    //imports for the same thing.
+    private static HashSet<File> user_imports;
+    
+    //the list of things we should import. In the #use "___" or in a native 
+    //import.
+    private static Queue<String> to_import;
+    
+    
+    //1. initialize objects
+    //
+    //2. scan the main file for #use statements
+    //
+    //3. gather all of the files under the #use statements and put it into the 
+    //   main file. Continue until there are no more #use statements, or when we
+    //   have already #used a certain file or native library. Delete all #use
+    //   statements after it has finished.
+    //
+    //4. scan ground-level syntax. (bottom level, out of all {}). First, we scan 
+    //   for structs. If the struct is already named, or infringes on a reserved 
+    //   word, we flag an error and record the position. Otherwise, we add the 
+    //   struct to the list of structs (by adding the name and the body. The 
+    //   body will be compiled later). We then delete the struct from the file 
+    //   being edited. Next, we search for typedefs. If the typedef infringes on 
+    //   a name (like using a reserved word or the name of a struct), or if the 
+    //   typedef uses an unknown name, or if the typedef gives something which 
+    //   is an illegal name (illegal characters for a name), we flag an error, 
+    //   record the position, and continue. We add the typedef to the HashSet 
+    //   typedefs if the typedef was correct. We then delete the typedef from 
+    //   the file we are analyzing. Next, we scan for interfaces. Each interface
+    //   we come by we add to the unfilled_methods. We determine if a method is 
+    //   an interface if we have some return type followed by a name, followed 
+    //   by paraentheses, followed by a terminator (";"). We scan for the 
+    //   terminator by searching after the end of the ")", and searching the 
+    //   next lines. If the line is empty (only whitespace), continue to the 
+    //   next line. If the line contains a comment, copy the comment from the 
+    //   end till the beginning and remove it from the file. If the comment is 
+    //   an @requires, add it to the list of @requires statements. If the 
+    //   statement is an @ensures, add it to the list of @ensures statements. 
+    //   If the statement is otherwise @*, log an error as a method can only 
+    //   have @requires and @ensures. If the comment is not @*, discard the 
+    //   comment. Continue scanning after each comment. If the next statement 
+    //   does not begin with a ";" or a "{", log an error, end checking 
+    //   interfaces, and only check methods up till that method. Otherwise If 
+    //   we're scanning and see a declaration with parentheses, and then see 
+    //   syntax "{}" in the next statement, drop all recorded errors and jump to 
+    //   the end of the syntax block. We do this if by incrementing an integer 
+    //   for all of the starts of syntax blocks "{", and decrementing the 
+    //   integer for all ends "}". We are at the end of this method's syntax 
+    //   when the integer reaches zero. If we reach the end of the file and the 
+    //   integer is greater than zero, we know that the user has missed a 
+    //   bracket "}". We create a new method of the given return type, name, 
+    //   parameters, and body. If the method existed as an unfilled_method, we 
+    //   remove the unfilled method. If the method's return type does not match, 
+    //   record the error. If the method and the interface's parameters do not 
+    //   match, we record the error. If a method already exists under the same 
+    //   name, record that error, and do not add the method to the list of 
+    //   methods. Otherwise add the method to the list of methods. Then, delete 
+    //   the method till the end of the file. We then log that there is a 
+    //   missing } in the method, and break our checking for interfaces. We 
+    //   continue to check the methods. Next, we know that we are at an 
+    //   interface. If the interface's name infringes on a reserved word, or if 
+    //   the interface's name infringes on a declared struct, or if the 
+    //   interfaces name infringes on a declared typedef, we log an error. We 
+    //   then check the parameters. If a parameter's values are not usable as 
+    //   values (or recognizable values), we log an error for that parameter and
+    //   continue to the next parameter. If a parameter's value is type-def-ed, 
+    //   we replace the value with the type-def-ed value. If a parameter's name 
+    //   infringes on a type-def-ed value, a struct name, or a reserved_word, 
+    //   log the error, and continue on to the next parameter. If none of these
+    //   errors occured, we make a new C0Data Variable with the name and the 
+    //   data type. (We do this for all parameters that work.) When we reach the 
+    //   end of the parameters, we place all of the C0Data Variables into an 
+    //   array. If unfilled_methods already contains a method under the same 
+    //   name, we then check to see that all of the parameter types match up in 
+    //   the same order. If they do not, we log an error for the entire new 
+    //   interface, and we remove the new interface from our list of interfaces 
+    //   to be added. If the parameters and return type match, we add the new 
+    //   @requires and @ensures statements to the existing ones. The hashmap 
+    //   does not contain the C0Interface under the name, we then create a new 
+    //   C0Interface with the given return type, name, and parameters. We then 
+    //   add the C0Interface to unfilled_methods. We do this process till we 
+    //   reach the end of the file or ontil we otherwise break. We then remove 
+    //   the interface, as a whole, from the file. (even if the interface had 
+    //   errors. If the interface had an error that caused the compiler to stop
+    //   scanning prematurely, remove from the beginning of the interface till
+    //   the end of the file.) If something that we scan is neither struct, nor
+    //   typedef, not interface, nor method, we record the instance until a 
+    //   we either find something in the form of "known type  ___"("expression") 
+    //   [a method or interface], a semicolon, a typedef, or a struct. We then 
+    //   take the range from the beginning of the unknown expression, till right
+    //   before the begining of the struct, typedef, or known type. If the 
+    //   expression is terminated by a semicolon, include the semicolon. We then
+    //   log the error on the range, and delete the range from the file.
+    //   We then go through a second-pass and add methods to the system. We know
+    //   that we have removed all interfaces from the system, and we have 
+    //   removed all erroneous methods that do not close in syntax. We have also
+    //   removed all structs, typedefs, and all statements that don't make any
+    //   sense. So, the only thing left are methods. We go through the same 
+    //   routine of adding parameters to the method and checking that the method 
+    //   is correct. When we finish constructing a method, we check if the 
+    //   method is in the set unfilled_methods. If so, we make sure that all of 
+    //   the parameters, return type, etc, match up. If they don't, log the 
+    //   error. In either case remove the method from the unfilled_methods.
+    //   If the method already exists under m0_methods, we log the error that 
+    //   there cannot be two of one method. If the debugging flag is on, we add 
+    //   @requires and @ensures assertions the same way we did for interfaces. 
+    //   We then create a new method with all of the return types and parameters
+    //   that were recognizable, and all @requires, @ensures, statements, and 
+    //   the body of the file. If the method was a duplicate, add the method
+    //   to bad_methods, to be analyzed later. Otherwise, add it to methods.
+    //   now, we are done refactoring all parts of the files, and we are left 
+    //   with an empty file.
+    //
+    //5. We then want to look at all of the methods and make sure that they make
+    //   sense. A few things we will have to do while looking at methods - 
+    //   replace any typedefs, convert all bools to booleans, and convert all
+    //   booleans to bools. 
+    //   
+    //   We define a statement as some string terminated by a semicolon (;).
+    //   A statement may be an assignment x = y, where x is a variable and y is
+    //   a value. Alternatively, a statement can also just be a value y. (note:
+    //   an expression is a value as it evaluates to a value, and a value is an
+    //   expression.) There is a difference in how java and C0 handle 
+    //   expressions only with a statement. So, on our second pass, when 
+    //   compiling to java, we set just an expression as a statement 
+    //   from:
+    //           expr;
+    //   to: 
+    //           {Object NULL = expr;}
+    //   in order to avoid any conflicts.
+    //
+    //   So, in a way, all statements are assignments.
+    //
+    //   we define a code block as the expressions and code blocks contained in
+    //   a set of brackets, {}. There are some other cases where something else 
+    //   is a code block: the statement immediately after an if, the statement 
+    //   immediately after an else, the statement immediately after a for, and
+    //   the statement immediately after a while. We use the StackSet to keep 
+    //   of local data within a method to ensure there are no name conflicts.
+    //
+    //   In a method, if there is a return type, we ensure that there is at 
+    //   least one return statement. We make sure that the return value type 
+    //   matches the function return type.
+    //   
+    //   Another restriction that the Java compiler has that the C0 compiler 
+    //   does not have is that Java recognizes when a function will run on 
+    //   forever (on a very basic level), or when there are unreachable 
+    //   statements. C0 does not have this restriction. I think I'll leave it 
+    //   for now, and just print out the error through the Java compiler.
+    //
+    
+    //          option: put if(true) before loops, break statements, and return
+    //                  statements.
+    //
+    //   Anyway, now to define the process that will be made for checking the C0
+    //   code in the methods.
+    //   We first check the requires and assert statements.
+    //   Something create new pointers for every **. Break up syntax to a list 
+    //   of statements. Make sure statements are good in C0. Then we go through 
+    //   a second pass and turn all of the C0-language specifics into java 
+    //   specifics.
+    
+//       whatever, I'm too tired now. I think I;ll bed.
+    //   lol look at this guy ^^
+    
+    //note: if file is in the args flag, we add in 
+    //struct file;
+    //typedef struct file* file_t;
+    //NOTE: WE ARE ALLOWED TO 
+    //struct file;
+    //as long as if we don't alloc(struct file);
+    //as struct file is not defined.
+
+    private static void imports(){
+        //gathers all of the files and puts them into one large file
+    }
+    
+    private static void checkC0(){
+        //checks that all of the c0 code is valid. If so, we can proceed to
+        //convert the C0 file to a java file.
+    }
+    private static void reformatC0(){
+        //puts c0 in a easier way for the this compiler to see what is going 
+        //on.
+    }
+    private static void scanMethods(){
+        //scan the file for methods and adds them to the trie of methods
+    }
+    
+    private static void scanTypeDefs(){
+        //scan the file for typedefs and adds them to the trie of methods
+    }
+    private static void scanImports(){
+        //scan the file for #use statements, and add them to the trie of methods
+    }
+    private static void c0ToJava(){
+    }
+    
+    //operations on the data types
+    static void putInterface(C0Interface coi){
+        assert coi != null;
+        interfaces.put(coi.name, coi);
+    }
+    
+    //returns the java code
+    public static String compile(File source_root){
+        reserved_words = new HashSet<String>();
+        //add on the basic used names.
+        
+        //types
+        reserved_words.add("bool");
+        reserved_words.add("int");
+        reserved_words.add("char");
+        reserved_words.add("string");
+        reserved_words.add("struct");
+        reserved_words.add("void");
+        
+        //standard static final variables
+        reserved_words.add("NULL");
+        
+        //operations on a block of syntax
+        reserved_words.add("for");
+        reserved_words.add("while");
+        reserved_words.add("switch");
+        reserved_words.add("if");
+        reserved_words.add("else");
+        
+        //keywords used in a block of syntax
+        reserved_words.add("return");
+        reserved_words.add("break");
+        reserved_words.add("assert");
+        
+        
+        methods = new Trie<C0Method>();
+        //alloc and alloc_array maybe? I think I'll check these in the
+        
+        
+        interfaces = new HashMap<String, C0Interface>();
+        
+        //add the main function
+        putInterface(new C0Interface(new C0Variable[]{}, Types.INT, "main"));
+            //int main() function
+        
+        //the root's source
+        CompileC0.source_root = source_root;
+        
+        imports();
+        
+        typedefs();
+        
+        structs();
+        
+        interfaces();
+        methods();
+        
+        
+        
+        checkC0();//check the correctness of the code
+        
+        c0ToJava();//convert the code
+    }
+}
+//REPRESENTATION OF C0 DATA*****************************************************
+
+//we have a way of knowing the inputs and outputs of a function, but we do not 
+//have a way of analyzing the data within a function. Here's an idea of what we 
+//could do: (we already have the String body in the c0 method, and String assert
+//statements.)
+
+class Thing{}
+
+//syntax within brackets {}
+class Syntax extends Thing{
+    //this is a recursive call to a list of code things to execute.
+    List<Thing> code;
+    
+}
+class MethodParse{
+    //parse a correct c0 string of a type into a c0 type.
+    static C0Data getType(String s){
+    }
+    static C0Data operation(C0Data, C0Data){
+    }
+}
+//a method in itself is one block of syntax.
+class Method extends Syntax{
+    interface RelationName{
+        //the name the operation goes by. (i.e. division)
+        String relationAlias();
+    }
+    
+    //an element that can be evaluated in an expression. i.e. a relation 
+    //or a Data type. X and D have to both be expression elements, so we can 
+    //chain together expressions.
+    interface ExpressionElement<X extends ExpressionElement, D extends ExpressionElement>{
+        public int numArgs();
+        public D relate(X[] x);
+    }
+    //f : R1 → R2
+    //we want R1 and R2 to be sub-classes of Expression Elements, such that both
+    //of the elements in the relation (the domain and the codomain) to be parts 
+    //of an expression
+    abstract class ExpressionRelation<R1 extends ExpressionElement, R2 extends ExpressionElement> implements ExpressionElement<R1, R2>{
+        //possibly the relation's String (i.e. / is the identifier relation of division)
+        public abstract <D> D relationIdentifier();
+        abstract <R> HashMap<R, R2> relation();
+            //some arbitrary type R which can be used. Could be a tuple.
+    }
+    //A is simply used to define the domain, and B is used to describe the codomain.
+    abstract class BinaryRelation<A extends ExpressionElement, B extends ExpressionElement> extends ExpressionRelation<A, B>{
+        abstract HashMap<ExpressionElement, B> relation();
+        abstract HashSet<A> A();//left hand side
+        abstract HashSet<B> B();//right hand side
+        @Override public String toString(){
+            return relationIdentifier() + " : " + A() + " → " + B();
+        }
+        public int numArgs(){
+            return 1;
+        }
+        public B relate(ExpressionElement[] x){
+            assert x.length == numArgs();
+            if(!A().contains(x[0]))
+            return relation().get(x[0]);
+            //will have the zero'th element, previous assertion
+        }
+    }
+    
+    //f : A×B → C
+    abstract class TernaryRelation<A extends ExpressionElement, B extends ExpressionElement, C extends ExpressionElement> extends ExpressionRelation<TernaryRelation<A, B, C>.Pair, C, C>{
+        //sub-class of syntax, as relations only exist in syntax
+        
+        
+        
+        //BAD. how about the set (A → B)→C? Where A is a LHS mapping. By the 
+        //way C0 works (and most coding in general) C's output will always be 
+        //known if A and B are known.
+        
+        
+        class Pair {
+            public Pair(A a, B b){
+                this.a = a; this.b = b;
+            }
+            
+            final A a;final B b;
+        }
+        //for binary, we have the domain, the codomain, and the relation.
+        
+        
+        //domain
+        abstract HashSet<A> A();//left hand side
+        abstract HashSet<B> B();//right hand side
+        //codomain
+        abstract HashSet<C> C();//return val; may be void
+        
+        //abstract HashMap<Pair, C> relation();
+        
+        public int numArgs(){
+            return 2;
+        }
+        public B relate(A[] x){
+            //left hand side, right hand side
+            assert x.length == numArgs();
+            
+            return relation().get(new Pair(x[0], x[1]));
+            //will have the zero'th element, previous assertion
+        }
+        
+        @Override public String toString(){
+            return relationIdentifier() + " : " + A() + "×" + B() + " → " + C();
+        }
+    }
+    abstract class SymmetricRelation3<A, C extends ExpressionElement> extends TernaryRelation<A, A, C>{
+        class SymmetricPair extends Pair{
+            public SymmetricPair(A a){
+                super(a, a);
+            }
+        }
+        @Override HashSet<A> A() {return B();};
+    }
+    abstract class SymmetricRelation2<A extends ExpressionElement> extends BinaryRelation<A, A>{
+        @Override HashSet<A> A() {return B();};
+    }
+    abstract class SingleRelation3<A  extends ExpressionElement> extends SymmetricRelation3<A, A>{
+        @Override HashSet<A> A() {return B();}
+        @Override HashSet<A> B() {return C();}
+    }
+    //a relation between C0 datas
+    abstract class C0Relation3 extends TernaryRelation<C0Data, C0Data, C0Data>{}
+    abstract class C0SymmetricRelation3 extends SymmetricRelation3<C0Data, C0Data>{}
+    abstract class C0SymmetricRelation2 extends SymmetricRelation2<C0Data>{}
+    abstract class C0SingleRelation3 extends SingleRelation3<C0Data>{}
+    abstract class C0SameTypeOperation3 extends C0SingleRelation3 implements RelationName{
+        final HashSet<C0Data> SET;
+        final HashMap<Pair, C0Data> RELATION;
+        public C0SameTypeOperation3(C0Data type){
+            C0Data i = type;
+            HashSet<C0Data> set = new HashSet<C0Data>();set.add(i);
+            HashMap<Pair, C0Data> relation = new HashMap<Pair, C0Data>();
+            relation.put(new SymmetricPair(i), i);
+            SET = set;
+            RELATION = relation;
+        }
+        @Override HashSet<C0Data> C() {
+            return SET;
+        }@Override HashMap<Pair, C0Data> relation() {
+            return RELATION;
+        }
+    }
+    abstract class C0SameTypeOperation2 extends SymmetricRelation2<C0Data> implements RelationName{
+        final HashSet<C0Data> SET;
+        final HashMap<C0Data, C0Data> RELATION;
+        public C0SameTypeOperation2(C0Data type){
+            C0Data i = type;
+            HashSet<C0Data> set = new HashSet<C0Data>();set.add(i);
+            HashMap<C0Data, C0Data> relation = new HashMap<C0Data, C0Data>();
+            relation.put(i, i);
+            SET = set;
+            RELATION = relation;
+        }
+        @Override HashSet<C0Data> B() {
+            return SET;
+        }@Override HashMap<C0Data, C0Data> relation() {
+            return RELATION;
+        }
+    }
+    /**a C0 integer operation. Like a division, multiplication, and bitwise operations**/
+    abstract class C0IntegerOperation3 extends C0SameTypeOperation3{
+        public C0IntegerOperation3(){super(Types.INT);}
+    }
+    abstract class C0IntegerOperation2 extends C0SameTypeOperation2{
+        public C0IntegerOperation2(){super(Types.INT);}
+    }
+    abstract class C0BooleanOperation2 extends C0SameTypeOperation2{
+        public C0BooleanOperation2(){super(Types.BOOL);}
+    }
+    class NOT extends C0BooleanOperation2{
+        @Override public String relationIdentifier() {
+            return "!";
+        } @Override public String relationAlias() {
+            return "not";
+        }
+    }
+    //integer operations
+    class Division extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return "/";
+        }
+        @Override public String relationAlias() {
+            return "division";
+        }
+    } 
+    class Multiplication extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return "*";
+        }
+        @Override public String relationAlias() {
+            return "multiplication";
+        }
+    }
+    class Addition extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return "+";
+        }
+        @Override public String relationAlias() {
+            return "addition";
+        }
+    } 
+    class Subtraction extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return "-";
+        }
+        @Override public String relationAlias() {
+            return "subtraction";
+        }
+    }
+    
+    class BitwiseAND extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return "&";
+        }
+        @Override public String relationAlias() {
+            return "bitwise and";
+        }
+    } 
+    class BitwiseOR extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return "|";
+        }
+        @Override public String relationAlias() {
+            return "bitwise or";
+        }
+    } 
+    class BitwiseNOT extends C0IntegerOperation2{
+        @Override public String relationIdentifier() {
+            return "~";//should be a binary relation
+        }
+        @Override public String relationAlias() {
+            return "bitwise not";
+        }
+    } 
+    class BitwiseXOR extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return "^";
+        }
+        @Override public String relationAlias() {
+            return "bitwise xor";
+        }
+    }
+    
+    class BitwiseShiftL extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return "<<";
+        }
+        @Override public String relationAlias() {
+            return "bitwise shift left";
+        }
+    }
+    class BitwiseShiftR extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return ">>";
+        }
+        @Override public String relationAlias() {
+            return "bitwise shift right";
+        }
+    }
+    class Mod extends C0IntegerOperation3{
+        @Override public String relationIdentifier() {
+            return "%";
+        }
+        @Override public String relationAlias() {
+            return "mod";
+        }
+    }
+    
+    //used in comparisons (just shortcuts, and so we don't have to make a 
+    //million) arrays
+    final static C0Data[] EQUALITY = {Types.INT, Types.CHAR, Types.BOOL, Types.POINTER, Types.ARRAY};
+    final static C0Data[] COMPARABLE = {Types.INT, Types.CHAR};
+    //no such things as string operations and char operations
+    abstract class Comparison extends C0SymmetricRelation3 implements RelationName{
+        final HashSet<C0Data> B;
+        final HashSet<C0Data> C;
+        final HashMap<Pair, C0Data> RELATION;
+        
+        public Comparison(C0Data... types){
+            B = new HashSet<C0Data>(Arrays.asList(types));//available sides of the relation
+            C = new HashSet<C0Data>(Arrays.asList(Types.BOOL));//return bool
+            //we compare two alike elements, so the pairs in the relation will all be symmetric
+            HashMap<Pair, C0Data> relation = new HashMap<Pair, C0Data>();
+            for(C0Data dat: types){
+                relation.put(new SymmetricPair(dat), Types.BOOL);
+            }
+            RELATION = relation;
+        }
+        HashSet<C0Data> B(){
+            return B;
+        }
+        HashSet<C0Data> C(){
+            return C;
+        }
+        HashMap<Pair, C0Data> relation(){
+            return RELATION;
+        }
+    }
+    class EQ extends Comparison{
+        public EQ(){super(EQUALITY);}
+        @Override public String relationIdentifier() {
+            return "==";
+        } @Override public String relationAlias() {
+            return "equal to";
+        }
+    } 
+    class NEQ extends Comparison{
+        public NEQ(){super(EQUALITY);}
+        @Override public String relationIdentifier() {
+            return "!=";
+        } @Override public String relationAlias() {
+            return "not equal to";
+        }
+    }
+    class LT extends Comparison{
+        public LT(){super(COMPARABLE);}
+        @Override public String relationIdentifier() {
+            return "<";
+        } @Override public String relationAlias() {
+            return "less than";
+        }
+    }
+    class GT extends Comparison{
+        public GT(){super(COMPARABLE);}
+        @Override public String relationIdentifier() {
+            return ">";
+        } @Override public String relationAlias() {
+            return "greater than";
+        }
+    }
+    class LE extends Comparison{
+        public LE(){super(COMPARABLE);}
+        @Override public String relationIdentifier() {
+            return "<=";
+        } @Override public String relationAlias() {
+            return "less than or equal to";
+        }
+    }
+    class GE extends Comparison{
+        public GE(){super(COMPARABLE);}
+        @Override public String relationIdentifier() {
+            return ">=";
+        } @Override public String relationAlias() {
+            return "greater than or equal to";
+        }
+    }
+    
+    //no such things as string operations and char operations. boolean operationsaer negations, etc
+    abstract class C0BooleanOperation extends C0SameTypeOperation3{
+        public C0BooleanOperation(){super(Types.BOOL);}
+    }
+    
+    class OR extends C0BooleanOperation{
+        @Override public String relationIdentifier() {
+            return "||";
+        }
+        @Override public String relationAlias() {
+            return "or";
+        }
+    }
+    class AND extends C0BooleanOperation{
+        @Override public String relationIdentifier() {
+            return "&&";
+        }
+        @Override public String relationAlias() {
+            return "and";
+        }
+    }
+    
+    //todo: parentheses (as a relation)
+    //it's a binary relation. the input is the evalutated input from the 
+    //beginning of the parentheses till the end, and the output is the evaluated
+    //type/value.
+    
+    //todo: equals.
+    //it's a ternary relation where the left hand side is a C0Variable, the 
+    //right hand side is a variable/value of the same type, and the return is 
+    //void
+    
+    //todo: ->
+    
+    //todo .
+    
+    //todo !
+    
+    //todo ++
+    
+    //todo --
+    
+    //todo +=, etc=
+    
+    //[(expression)], where (expression) must evaluate to an int
+    
+    class ForLoop extends Syntax{
+        C0Statement initialization;
+        C0Statement loop_guard;//should evaluate to boolean
+        C0Statement increment;//we don't need to know what this evaluates to
+    }
+    class WhileLoop extends Syntax{
+        C0Statement loop_guard;//should evaluate to boolean
+    }
+    class If extends Syntax{}
+    class Else extends Syntax{}
+    
+    //evaluates an expression. an empty expression evaluates to null
+    static <D extends ExpressionElement> D shuntingYard(Expression<D> exp){
+        D val = null;
+        for(ExpressionElement<D, D> e: exp.exp){
+            if(e instanceof Expression){
+                val = shuntingYard((Expression<D>)e);
+            } else if (e instanceof ExpressionRelation){
+                val = ((ExpressionRelation<D, D>)e).relation().get(e);
+            } else {
+                try{
+                val = (D)e;
+                }catch(Exception execp){
+                    System.err.println("internal error: " + e + "was expected to ");
+                }
+            }
+        }
+        return val;
+    }
+    
+    class Expression<D extends ExpressionElement> implements ExpressionElement<D, D>{
+        public int numArgs(){return 0;}
+        public D relate(D[] x){
+            assert x.length == numArgs();
+            return shuntingYard(this);
+        }
+        //an expression is a list of other expressions.
+        List<ExpressionElement<D, D>> exp;
+        //the tokens in an expression. Later used with the shunting yard 
+        //algorithm to determine whether or not the expression is correct.
+        
+        //this method also allows us to evaluate syntax in the inner parentheses
+        //before we evaluate the line as a whole (recursion!)
+    } class C0Expression extends Expression<C0Data>{}
+    //if there's a problem with a statement (or an expression)
+    class C0Statement extends Thing{
+        FileManip text;//the original text source
+        Expression<C0Data> exp;
+        //math thing is defined as a string of relations which anlyze to other
+        //values.
+        //we test whether each operation works or not as we go.
+    }
+
+    //evaluate to a boolean
+    class Assertion extends C0Statement{}
+
+    class LoopInvariant extends Assertion{}
+
+    class Requires extends Assertion{}
+    class Ensures extends Assertion{}
+}
+
+
+
+/**a method that a C0 file holds.*/
+class C0Interface{
+    final C0Data[] inputs;//input variables
+    
+    final C0Data return_type; //the return type
+    
+    
+    //non-final, so we can add multiple requires/ensures over multiple interface
+    //declarations
+    
+    ArrayList<C0Requires> requires;
+    ArrayList<C0Ensures> ensures;
+    
+    final String name;
+    
+    public C0Interface(C0Data[] inputs, C0Data return_type, ArrayList<C0Requires> requires, ArrayList<C0Ensures> ensures, String name){
+        this.inputs      = inputs;
+        this.return_type = return_type;
+        this.requires    = requires;
+        this.ensures     = ensures;
+        this.name        = name;
+    }
+    public C0Interface(C0Data[] inputs, C0Data return_type, String name){
+        this.inputs      = inputs;
+        this.return_type = return_type;
+        this.name        = name;
+    }
+    
+    /**a requires statement that dictates the inputs of a C0 method*/
+    class C0Requires extends C0Assert{}
+    
+    /**an ensures statement that dictates the outputs of a C0 method*/
+    class C0Ensures extends C0Assert{}
+    
+    /**
+     * a loop invariant that dictates whether the execution of a loop is proper.
+     * used in the middle of a C0 method
+     */
+    class C0LoopInvar extends C0Assert{}
+    
+    /**
+     * a basic invariant used to check whether or not a method is executing 
+     * properly. Used in the middle of a C0 method.
+     */
+    class C0Assert{FileManip data;}
+    @Override public String toString(){
+        return return_type + " " + name  + Arrays.toString(inputs);
+    }
+    @Override public boolean equals(Object other){
+        if(other instanceof String)
+            return name.equals(other);
+        else if(other instanceof C0Interface)
+            return name.equals(((C0Interface)other).name);
+        return false;
+    }
+    @Override public int hashCode(){
+        return name.hashCode();
+    }
+}
+class C0Method extends C0Interface{
+    class C0MethodBody{FileManip data;}
+    C0MethodBody body;
+    final String[] c0_names;
+    public C0Method(C0Variable[] inputs, C0Data return_type, ArrayList<C0Requires> requires, ArrayList<C0Ensures> ensures, String name, C0MethodBody body){
+        super(inputs, return_type, requires, ensures, name);
+        String[] names = new String[inputs.length];
+        for(int i = 0; i < inputs.length; i++){
+            names[i] = inputs[i].c0_name;
+        }
+        this.body = body;
+        this.c0_names = names;
+    }
+    public C0Method(C0Variable[] inputs, C0Data return_type, String name, C0MethodBody body){
+        super(inputs, return_type, name);
+        this.body = body;
+        String[] names = new String[inputs.length];
+        for(int i = 0; i < inputs.length; i++){
+            names[i] = inputs[i].c0_name;
+        }
+        this.c0_names = names;
+    }
+}
+/**a typedef in a C0 file.*/
+class C0TypeDef{
+    //we cannot define a type more than once. 
+    final String name;//the name that is being used in place
+    final C0Data type;//the type that is being replaced by name
+    public C0TypeDef(String name, C0Data type){
+        this.name = name;
+        this.type = type;
+    }
+    @Override public int hashCode(){
+        return name.hashCode();
+    }
+    @Override public boolean equals(Object other){
+        if(other instanceof String){
+            return name.equals(other);
+        } else if(other instanceof C0TypeDef){
+            return name.equals(((C0TypeDef)other).name);
+        }
+        return false;
+    }
+    @Override public String toString(){
+        return "typedef " + type + " " + name;
+    }
+}
+
+/*********************************Data in C0***********************************/
+class C0Data implements Method.ExpressionElement<C0Data, C0Data>{    
+    final SmallType representation;
+        //the representation of the C0 data. A LargeType (Struct) is represented
+        //by a pointer
+    public C0Data(SmallType representation){
+        this.representation = representation;
+    }
+
+    @Override public int numArgs() {
+        return 0;
+    }
+    @Override public C0Data relate(C0Data[] x) {
+        assert x.length == numArgs();
+        return this;
+    }
+    
+    enum SmallType{
+        INT, CHAR, BOOL, STRING, ARRAY, POINTER
+    }
+    enum LargeType{
+        STRUCT
+    }
+    @Override public String toString(){
+        switch(representation){
+            case INT:    return "int";
+            case CHAR:   return "char";
+            case BOOL:   return "bool";
+            case STRING: return "string";
+            case ARRAY:  return ((Arrayable)this).getArrayType() +"[]";
+            case POINTER:return ((Pointable)this).getPointerType() +"*";
+        }
+        return "";
+    }
+    
+    @Override public boolean equals(Object other){
+        if(other instanceof String)
+            return toString().equals(other);
+        else if(other instanceof C0Data)
+            return ((C0Data)other).toString().equals(toString());
+        else return false;
+    }
+    @Override public int hashCode(){
+        return toString().hashCode();
+    }
+}
+class Variables{
+    private static C0Data line(C0Data data){
+        if(data instanceof Pointable){
+            return Types.POINTER(line(((Pointable)data).getPointerType()));
+        } else if(data instanceof Arrayable){
+            return Types.ARRAY(line(((Arrayable)data).getArrayType()));
+        } else{
+            switch(data.representation){
+                case BOOL:
+                    return Types.BOOL;
+                case CHAR:
+                    return Types.CHAR;
+                case INT:
+                    return Types.INT;
+                default:
+                    if(data instanceof C0Struct){
+                        return data;
+                    } else if(data instanceof Void){
+                        throw new AssertionError("void cannot be a variable.");
+                    } 
+                    throw new AssertionError("unknown data type.");
+            }
+        }
+    }
+    static IntVar INT(String var_name){
+        return new IntVar(var_name);
+    }
+    static BoolVar BOOL(String var_name){
+        return new BoolVar(var_name);
+    }
+    static CharVar CHAR(String var_name){
+        return new CharVar(var_name);
+    }
+    static ArraVar ARRAY(String var_name, C0Data array_type){
+        return new ArraVar(var_name, array_type);
+    }
+    static PointVar POINT(String var_name, C0Data array_type){
+        return new PointVar(var_name, array_type);
+    }
+    static StriVar STRING(String var_name){
+        return new StriVar(var_name);
+    }
+    
+    /**
+     * creates a new C0 variable under the name "var_name" and of the type 
+     * "var_type"
+     */
+    static C0Variable create(C0Data var_type, String var_name){
+        if(var_type instanceof Pointable){
+            return new PointVar(var_name, line(((Pointable)var_type).getPointerType()));
+        } else if(var_type instanceof Arrayable){
+            return new ArraVar(var_name, ((Arrayable)var_type).getArrayType());
+        } else{
+            switch(var_type.representation){
+                case BOOL:
+                    return new BoolVar(var_name);
+                case CHAR:
+                    return new CharVar(var_name);
+                case INT:
+                    return new IntVar(var_name);
+                default:
+                    if(var_type instanceof C0Struct){
+                        throw new AssertionError("a struct cannot be a variable. Hint: pass structs using pointers.");
+                    } else if(var_type instanceof Void){
+                        throw new AssertionError("void cannot be a variable.");
+                    }
+                    throw new AssertionError("unknown data type.");
+            }
+        }
+    }
+}
+class C0Variable extends C0Data{
+    final String c0_name;//the name of the variable. does not change.
+    
+    public C0Variable(SmallType representation, String c0_name){
+        super(representation);
+        this.c0_name = c0_name;
+    }
+    @Override public String toString(){
+        return super.toString() +" "+ c0_name;
+    }
+}
+interface SType{}
+interface LType{}
+class SmallT extends C0Data implements SType{
+    public SmallT(SmallType t){
+        super(t);
+    }
+}
+
+class SmallTypeVar extends C0Variable implements SType{
+    public SmallTypeVar(SmallType t, String var_name){
+        super(t, var_name);
+    }
+}
+/**Small-Types*/
+
+class Types{
+    public static final Int    INT     = new Int();
+    public static final Char   CHAR    = new Char();
+    public static final Bool   BOOL    = new Bool();
+    public static final Stri   STRI    = new Stri();
+    public static final Void   VOID    = new Void();
+    
+    //void arrays and void pointers are not to be used as an actual C0 or type.
+    //instead, these are used internally to represent a pointer to an anytype,
+    //or an array of anytype.
+    public static final Point  POINTER = new Point(VOID);
+    public static final Arra   ARRAY   = new Arra(VOID);
+    
+    
+        //no representation for a COTYPE, as it is not passed around as a 
+        //variable
+    public static Arra ARRAY(C0Data type){
+        return new Arra(type);
+    }
+    public static Point POINTER(C0Data content){
+        return new Point(content);
+    }
+}
+
+class Int extends SmallT{
+    public Int(){super(SmallType.INT);}
+}
+class Char extends SmallT{
+    public Char(){super(SmallType.CHAR);}
+}
+class Bool extends SmallT{
+    public Bool(){super(SmallType.BOOL);}
+}
+class Stri extends SmallT{
+    public Stri(){super(SmallType.STRING);}
+}
+class Void extends SmallT{
+    public Void(){super(null);}
+    @Override public String toString(){
+        return "void";
+    }
+}
+class Arra extends SmallT implements Arrayable{
+    final C0Data type;
+//    public Arra(){super(SmallType.ARRAY);}
+    public Arra(C0Data type){super(SmallType.ARRAY);this.type = type;}
+    @Override public C0Data getArrayType(){
+        return type;
+    }
+}
+class Point extends SmallT implements Pointable{
+    final C0Data content;
+//    public Point(){super(SmallType.POINTER);}
+    public Point(C0Data content){super(SmallType.POINTER);this.content = content;}
+    @Override public C0Data getPointerType(){
+        return content;
+    }
+}
+interface Arrayable{
+    C0Data getArrayType();
+}
+interface Pointable{
+    C0Data getPointerType();
+}
+/**Variables - data in c0 represented with a name*/
+class IntVar extends SmallTypeVar{
+    public IntVar(String var_name){super(SmallType.INT, var_name);}
+}
+class CharVar extends SmallTypeVar{
+    public CharVar(String var_name){super(SmallType.CHAR, var_name);}
+}
+class BoolVar extends SmallTypeVar{
+    public BoolVar(String var_name){super(SmallType.BOOL, var_name);}
+}
+class StriVar extends SmallTypeVar{
+    public StriVar(String var_name){super(SmallType.STRING, var_name);}
+}
+class ArraVar extends SmallTypeVar implements Arrayable{
+    C0Data type;
+    public ArraVar(String var_name, C0Data array_type){super(SmallType.ARRAY, var_name); this.type = array_type;}
+    @Override public C0Data getArrayType(){
+        return type;
+    }
+}
+class PointVar extends SmallTypeVar implements Pointable{
+    C0Data content;
+    public PointVar(String var_name, C0Data pointer_to){super(SmallType.POINTER, var_name);content = pointer_to;}
+    @Override public C0Data getPointerType(){
+        return content;
+    }
+}
+
+
+
+/**Large-Types*/
+
+class LargeT extends C0Data implements LType{
+    public LargeT(){
+        super(SmallType.POINTER);
+            //large types MUST be represented by a pointer
+    }
+}
+
+/**
+ * large types cannot be variables, so there is no LargeTypeVar. Instead,
+ * we have C0Struct which has a struct_name given by the programmer.
+ */
+/**a struct that a C0 file holds.*/
+class C0Struct extends LargeT{
+    
+    /**The data that the struct holds */
+    final C0Variable[] types;//the types that go in a C0Struct
+
+    final String struct_name;//by definition, a struct has a name.
+    
+    public C0Struct(C0Variable[] types, String struct_name){
+        super();
+        this.struct_name = struct_name;
+        this.types = types;
+    }
+    @Override public boolean equals(Object other){
+        if(other instanceof C0Struct)
+            return struct_name.equals(((C0Struct)other).struct_name);
+        else if(other instanceof String)
+            return struct_name.equals(other);
+        else return false;
+    }
+    @Override public int hashCode(){
+        return struct_name.hashCode();
+    }
+    @Override public String toString(){
+        return "struct "+struct_name
+                ;
+//                + Arrays.toString(types);
+    }
+}

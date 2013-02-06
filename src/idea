@@ -1,0 +1,47 @@
+project goals:
+
+    :: provide a way to compile and run C0 code on any operating system/computer
+       (OSX, Windows, GNU/Linux, etc.) This could open up even the possibility 
+       of C0 on mobile devices. This service will be universally deployable by
+       "piggy-backing" on the JVM which is found on most computers and mobile 
+       devices
+
+    :: expand the capabilities of C0, or make "C0 With Classes", or 
+       alternatively C0++. 
+
+    :: I want to run C0 on the JVM by the java class loader, such that we're not
+       running a VM on the JVM (how silly!). It would be optimal if we used the 
+       java class loader to convert C0 code into the java bytecode format, and
+       then running it would be easy. This unfortunately leads to the fact that
+       because we're using the java bytecode, we won't have useful comments 
+       telling us exactly what's going on in the bytecode (which was cool!)
+       Maybe there's some Java feature I don't know about yet...
+
+
+feats:
+    
+    :: designing C0++ such that it provides more features and such that C0 code 
+       is is completely compilable on C0++
+    :: finding out how to compile a file into a source. Doing operations such as
+       AASDF (accessing the element in a struct based on a given number of bits)
+       are not supported easily by the JVM. I don't know, maybe I could do some 
+       tricky programming magic.
+    :: interpreter. Maybe not now. Limited time sucks.
+
+
+things that could be considered "bad":
+    :: J0 can't be compiled into a binary format (at least at the time)
+    :: java
+
+
+current goals: 
+    :: Currently, we just want to be able to "figure out" what's happening in a 
+       C0 file in the context of Java classes. 
+    :: Things to consider
+           :: How does "typedef" cross over to java?
+           :: Client side/implementation side in C0?
+           :: C0 native functions?
+           :: Assertions? Contracts?
+    :: Next: be able to use the java classloader to create classes for which a 
+       C0 file can be in context
+    :: finally: running should be straightforward. The JVM will handle that.

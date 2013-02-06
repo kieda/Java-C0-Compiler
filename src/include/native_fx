@@ -1,0 +1,544 @@
+/**@@__@@_I__LIKE_COFFEE!__%%%%%%%%%__COFFEE_IS_A_GOOD_DRINK_TO_DRINK!_@@__@@**/
+/**↑do not delete this line. This line is required for the entire program to 
+  * function*/
+
+
+/**native function calls**/
+
+/**
+ * note: do not change the identifier comments. The identifier comments are 
+ * used to recognize when to start and stop copying text, so the text can be
+ * included in the final file.
+ * \\#LOAD<C0 data type>
+ */
+
+
+
+\\$$BEGIN<string>
+    \\$$PRE
+        \\#LOAD<INTERFACE>
+            <name:string_length>        <ret:int>       <params:string>
+            <name:string_charat>        <ret:char>      <params:string, int>
+            <name:string_join>          <ret:string>    <params:string, string>
+            <name:string_sub>           <ret:string>    <params:string, int, int>
+            <name:string_equal>         <ret:bool>      <params:string, string>
+            <name:string_compare>       <ret:int>       <params:string, string>
+            <name:string_fromint>       <ret:string>    <params:int>
+            <name:string_frombool>      <ret:string>    <params:bool>
+            <name:string_fromchar>      <ret:string>    <params:char>
+            <name:string_tolower>       <ret:string>    <params:string>
+            <name:string_terminated>    <ret:bool>      <params:char[], int>
+            <name:string_to_chararray>  <ret:char[]>    <params:string>
+            <name:string_from_chararray> <ret:string>   <params:char[]>
+            <name:char_ord>             <ret:int>       <params:char>
+            <name:char_chr>             <ret:char>      <params:int>
+        \\#END<REMOVE>
+    \\$$END
+
+//everything seems to be fine in terms of the C0 to Java for characters, except
+//for characters less than 33, or characters greater than or equal to 127. 
+//I'll have to ask.
+    private char char_chr(int n){
+        if(!(0 <= n && n <= 127)) throw new AssertionError("requires::native function::<string>::char char_chr(int n)::0 <= n && n <= 127");
+        return (char) n;
+    }
+    private int char_ord(char c){
+        int $result = c;
+        if(!(0 <= $result && $result <= 127)) throw new AssertionError("ensures::native function::<string>::char char_ord(int n)::0 <= \\result && \\result <= 127");
+        return $result;
+    }
+    private char string_charat(String s, int idx){
+        if(!(0 <= idx && idx <= string_length(s))) 
+            throw new AssertionError("requires::native function::<string>::char string_charat(string s, int idx)::0 <= idx && idx <= string_length(s)");
+        return s.charAt(idx);
+    }
+    private int string_compare(String a, String b){
+        int $result = a.compareTo(b);
+        $result = ($result==0)?0:(($result<0)?-1:1);
+        if(!(-1 <= $result && $result <= 1)) throw new AssertionError("ensures::native function::<string>::int string_compare(string a, string b)::-1 <= \\result && \\result <= 1");
+        return $result;
+    }
+    private boolean string_equal(String a, String b){
+        return a.equals(b);
+    }
+    private String string_from_chararray(char[] A){
+        if(!(string_terminated(A, A.length))) throw new AssertionError("requires::native function::<string>::string string_from_chararray(char[] A)::string_terminated(A, \\length(A))");
+        String $result = "";
+        for(char c: A){
+            if(c=='\0') break; $result += ""+c;
+        }
+        if(!(string_length($result)+1 <= A.length)) throw new AssertionError("ensures::native function::<string>::string string_from_chararray(char[] A)::string_length(\\result)+1 <= \\length(A)");
+        return $result;
+    }
+    private String string_frombool(boolean b){
+        return ""+b;
+    }
+    private String string_fromchar(char c){
+        if(!(c!='\0')) throw new AssertionError("requires::native function::<string>::string string_fromchar(char c)::c!=\'\\0\'");
+        String $result = ""+c;
+        if(!(string_length($result)==1)) throw new AssertionError("ensures::native function::<string>::string string_fromchar(char c)::string_length(\\result) == 1");
+        return $result;
+    }
+    private String string_fromint(int i){
+        return ""+i;
+    }
+    private String string_join(String a, String b){
+        String $result = a.concat(b);
+        if(!(string_length($result)==string_length(a) + string_length(b))) throw new AssertionError("ensures::native function::<string>::string string_join(string a, string b)::string_length(\\result) == string_length(a) + string_length(b)");
+        return $result;
+    }
+    private int string_length(String s){
+        return s.length();
+    }
+    private String string_sub(String a, int start, int end){
+        if(!(0 <= start && start <= end && end <= string_length(a))) throw new AssertionError("requires::native function::<string>::string string_sub(string a, int start, int end)::0 <= start && start <= end && end <= string_length(a)");
+        String $result = a.substring(start, end);
+        if(!(string_length($result) == end - start)) throw new AssertionError("ensures::native function::<string>::string string_sub(string a, int start, int end)::string_length(\\result) == end - start");
+        return $result;
+    }
+    private boolean string_terminated(char[] A, int n){
+        if(!(0 <= n && n <= A.length)) throw new AssertionError("requires::native function::<string>::bool string_terminated(char[] A, int n)::0 <= n && n <= \\length(A)");
+        for(int i = 0; i < n; i ++){
+            if(A[i] == '\0') return true;
+        }
+        return false;
+    }
+    private char[] string_to_chararray(String s){
+        char[] $result = new char[s.length()+1];
+        s.getChars(0, s.length(), $result, 0);
+        $result[s.length()] = '\0';
+        if(!($result.length >= string_length(s) + 1)) throw new AssertionError("ensures::native function::<string>::char[] string_to_chararray(string s)::\\result.length >= string_length(s) + 1");
+        if(!(string_terminated($result, string_length(s) + 1))) throw new AssertionError("ensures::native function::<string>::char[] string_to_chararray(string s)::string_terminated(\\result, string_length(s) + 1)");
+        return $result;
+    }
+    private String string_tolower(String s){
+        return s.toLowerCase(java.util.Locale.ENGLISH);
+    }
+\\$$END
+
+\\$$BEGIN<parse>
+    \\$$PRE
+        \\#LOAD<INTERFACE>
+            <name:parse_bool> <ret:bool*> <params:string>
+            <name:parse_int>  <ret:int*>  <params:string, int>
+        \\#END<REMOVE>
+        \\#LOAD<POINTER>
+            <type:bool>
+            <type:int>
+        \\#END<KEEP>
+    \\$$END
+    private $bool$1 parse_bool(String s){
+        $bool$1 $result = new $bool$1();
+        if(s.equalsIgnoreCase("true"))$result.p = true;
+        else if(s.equalsIgnoreCase("false"))$result.p = false;
+        else $result = null;
+        return $result;
+    }
+    private $int$1 parse_int(String s, int base){
+        if(!(2 <= base && base <= 36)) throw new AssertionError("requires::native function::<parse>::int* parse_int(string s, int base)::2 <= base && base <= 36");
+        $int$1 $$result$$ = new $int$1();
+        try{
+            $$result$$.p = Integer.parseInt(s, base);
+        } catch(Exception e){
+            $$result$$ = null;
+        }
+        return $$result$$;
+    }
+\\$$END
+
+\\$$BEGIN<img>
+    \\$$PRE 
+        \\#LOAD<STRUCT> <struct image;> \\#END<REMOVE>
+        \\#LOAD<TYPEDEF><struct image* image_t>\\#END
+//        <REPLACE image_t java.awt.image.BufferedImage>
+        <REPLACE struct image* java.awt.image.BufferedImage>
+        \\#LOAD<INTERFACE>
+            <name:image_width>    <ret:int>       <params:image_t>
+            <name:image_height>   <ret:int>       <params:image_t>
+            <name:image_create>   <ret:image_t>   <params:int, int>
+            <name:image_clone>    <ret:image_t>   <params:image_t>
+            <name:image_destroy>  <ret:void>      <params:image_t>
+            <name:image_subimage> <ret:image_t>   <params:image_t, int, int, int, int>
+            <name:image_load>     <ret:image_t>   <params:string>
+            <name:image_save>     <ret:void>      <params:image_t, string>
+            <name:image_data>     <ret:int[]>     <params:image_t>
+        \\#END<REMOVE>
+    \\$$END
+
+    private java.awt.image.BufferedImage image_clone(java.awt.image.BufferedImage image){
+        //@requires image !=NULL;
+        if(!(image != null)) throw new AssertionError("requires::native function::<img>::image_t image_clone(image_t image)::image != NULL");
+        java.awt.image.BufferedImage $$$result$$$ = new java.awt.image.BufferedImage(image.getWidth(), image.getHeight(), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        $$$result$$$.setData(image.getData());
+        if(!(image_width($$$result$$$) == image_width(image))) throw new AssertionError("ensures::native function::<img>::image_t image_clone(image_t image)::image_width(\\result) == image_width(image)");
+        //@ensures image_width(\result) == image_width(image);
+        if(!(image_height($$$result$$$) == image_height(image))) throw new AssertionError("ensures::native function::<img>::image_t image_clone(image_t image)::image_height(\\result) == image_height(image)");
+        //@ensires image_height(\result) == image_height(image);
+        return $$$result$$$;
+    }
+    private java.awt.image.BufferedImage image_create(int width, int height){
+        if(!(0 < width && 0 < height))
+            throw new AssertionError("requires::native function::<img>::image_t image_create(int width, int height)::0 < width && 0 < height");
+        java.awt.image.BufferedImage $$$result$$$ = new  java.awt.image.BufferedImage(width, height, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        
+        if(!($$$result$$$ != null))
+            throw new AssertionError("ensures::native function::<img>::image_t image_create(int width, int height)::\\result != NULL");
+        if(!(image_width($$$result$$$) == width && image_height($$$result$$$) == height))
+            throw new AssertionError("ensures::native function::<img>::image_t image_create(int width, int height)::image_width(\\result) == width && image_height(\\result) == height");
+        return $$$result$$$;
+    }
+    private int[] image_data(java.awt.image.BufferedImage image){
+        if(!(image != null)) throw new AssertionError("requires::native function::<img>::int[] image_data(image_t image)::image != NULL");
+        int[] $$$result$$$ = image.getRGB(0, 0, image.getWidth(), image.getHeight(), null, 0, image.getWidth());
+        if(!($$$result$$$.length == image_width(image)*image_height(image))) 
+            throw new AssertionError("ensures::native function::<img>::int[] image_data(image_t image)::\\length(\\result) == image_width(image)*image_height(image)");
+        return $$$result$$$;
+    }
+    private void image_destroy(java.awt.image.BufferedImage image){/**no-op*/}
+    private int image_height(java.awt.image.BufferedImage image){
+        //@requires image != NULL;
+        if(!(image != null)) throw new AssertionError("requires::native function::<img>::int image_height(image_t image)::image != NULL");
+        int $$$result$$$ = image.getHeight();
+        if(!($$$result$$$ > 0)) throw new AssertionError("ensures::native function::<img>::int image_height(image_t image)::\\result > 0");
+        return $$$result$$$;
+        //@ensures \result > 0;
+    }
+    private java.awt.image.BufferedImage image_load(String path){
+        java.awt.image.BufferedImage img = null;
+        java.io.File input_file = new java.io.File(path);
+        //the path doesn't exist or we can't read it.
+        if(!input_file.canRead()) return img;
+        try {
+            //attempt to read the file.
+            img = javax.imageio.ImageIO.read(input_file);
+            return img;
+        } catch (java.io.IOException e) {
+            throw new AssertionError("prompt::native function::<img>::image_t image_load(string path)::File is not of a recognizable image type.");
+        }
+    }
+    private void image_save(java.awt.image.BufferedImage image, String path){
+        if(!(image != null)) throw new AssertionError("requires::native function::<img>::void image_save(image_t image, string path)::image != NULL");
+        String[] split = path.split(".");
+        String type = "png";
+        if(split.length == 0){
+            throw new AssertionError("requires::native function::<img>::void image_save(image_t image, string path)::string_length(path) > 0");
+        } else if(split.length > 1){
+            type = split[split.length-1];
+        }
+        java.io.File file = new java.io.File(path);
+        if(file.isDirectory()) 
+            throw new AssertionError("prompt::native function::<img>::image_t image_load(string path)::\""+path+"\" is already under the name of a directory.");
+        //a quick work-around for the fact that you can't create a file nested
+        //in many folders.
+        java.io.File highest_parent = file.getParentFile();
+        
+        java.util.Stack<java.io.File> files = new java.util.Stack<java.io.File>();
+        while(!highest_parent.exists()){
+            files.push(highest_parent);
+            highest_parent = highest_parent.getParentFile();
+        }
+        while(!files.isEmpty()){
+            java.io.File ff = files.pop();
+            ff.mkdir();
+        }
+        
+        try{
+            javax.imageio.ImageIO.write(image, type, file);
+        } catch(Exception e){
+            throw new AssertionError("prompt::native function::<img>::image_t image_load(string path)::Cannot create image at "+path+".\nProbably from an unsupported image type, from an invalid path, or from a name conflict.");
+        }
+    }
+    private java.awt.image.BufferedImage image_subimage(java.awt.image.BufferedImage image, int x, int y, int width, int height){
+        //@requires image != NULL;
+        if(!(image != null)) throw new AssertionError("requires::native function::<img>::image_t image_subimage(image_t image, int x, int y, int width, int height)::image != NULL");
+        //added requires. This is not on the c0 function specification, but should be.
+        //@requires width >= 0 && height >= 0;
+        if(!(width > 0 && height > 0)) throw new AssertionError("requires::native function::<img>::image_t image_subimage(image_t image, int x, int y, int width, int height)::width > 0 && height > 0");
+        int img_h = image.getHeight();
+        int img_w = image.getWidth();
+        java.awt.image.BufferedImage $$$result$$$ = new java.awt.image.BufferedImage(width, height, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D gg =  $$$result$$$.createGraphics();
+        {
+        int cropx, cropy, cropw, croph;
+        //where should our image be cropped to?
+        int posx, posy;
+        //where shall we place the cropped image?
+        {
+            int bot_ri_x = x + width;
+            int bot_ri_y = y + height;
+            if(y<= 0){
+                cropy =  0;
+                posy  = -y;
+            } else if(y <= img_h){
+                cropy = y;
+                posy =  0;
+            } else{
+                cropy = img_h;
+                posy =  -y;
+            }
+            if(x<= 0){
+                cropx =  0;
+                posx  = -x;
+            } else if(x <= img_w){
+                cropx = x;
+                posx =  0;
+            } else{
+                cropx = img_w;
+                posx =  -x;
+            }
+//            System.out.println("brx: " + bot_ri_x + " bry: " + bot_ri_y);
+            cropw = (bot_ri_x <= 0)? 0 :((bot_ri_x <= img_w)? bot_ri_x - cropx: img_w - cropx);
+            croph = (bot_ri_y <= 0)? 0 :((bot_ri_y <= img_h)? bot_ri_y - cropy : img_h - cropy);
+        }
+//        System.out.println("cx: "+ cropx + " cy: "+ cropy + " cw: "+cropw + " ch: "+croph);
+        if(!(cropw == 0 ||  croph == 0))
+            gg.drawImage(image.getSubimage(cropx, cropy, cropw, croph), null, posx, posy);
+        }
+        if(!(image_width($$$result$$$) == width)) throw new AssertionError("ensures::native function::<img>::image_t image_subimage(image_t image, int x, int y, int width, int height)::image_width(\\result) == width");
+        if(!(image_height($$$result$$$) == height)) throw new AssertionError("ensures::native function::<img>::image_t image_subimage(image_t image, int x, int y, int width, int height)::image_height(\\result) == height");
+        //@ensures image_width(\result) == width;
+        //@ensures image_height(\result) == height;
+        return $$$result$$$;
+    }
+    private int image_width(java.awt.image.BufferedImage image){
+        //@requires image != NULL;
+        if(!(image != null)) throw new AssertionError("requires::native function::<img>::int image_width(image_t image)::image != NULL");
+        int $$$result$$$ = image.getWidth();
+        if(!($$$result$$$ > 0)) throw new AssertionError("ensures::native function::<img>::int image_width(image_t image)::\\result > 0");
+        return $$$result$$$;
+        //@ensures \result > 0;
+    }
+\\$$END
+
+\\$$BEGIN<file>
+    //the LOAD<STRUCT> injects the struct into the list of structs before C0 
+    //compilation. LOAD_TYPEDEF injects the typedef into the list of typedefs before 
+    //C0 compilation. The <REPLACE> flag tells the compiler after C0 compilation 
+    //that the pointer file* should actually be handled as a java.io.BufferedReader
+    // file. The <REMOVE> flag tells the C0 compiler not to place the struct in the 
+    //java code.
+
+    \\$$PRE
+        \\#LOAD<STRUCT><struct file;>\\#END<REMOVE>
+        \\#LOAD<TYPEDEF><struct file* file_t>\\#END
+        <REPLACE struct file* java.io.BufferedReader>
+//        <REPLACE file_t java.io.BufferedReader>
+        \\#LOAD<INTERFACE>
+            <name:file_read>     <ret:file_t>    <params:string>
+            <name:file_close>    <ret:void>      <params:file_t>
+            <name:file_eof>      <ret:bool>      <params:file_t>
+            <name:file_readline> <ret:string>    <params:file_t>
+        \\#END<REMOVE>
+    \\$$END
+
+    private void file_close(java.io.BufferedReader f){
+        if(!(f!=null)) throw new AssertionError("requires::native function::<file>::void file_close(file_t f)::f!=NULL");
+        try{
+            f.close();
+        } catch(Exception e){}
+    }
+    private boolean file_eof(java.io.BufferedReader f){
+        //assertion
+        if(!(f!=null)) throw new AssertionError("requires::native function::<file>::bool file_eof(file_t f)::f!=NULL");
+        try{
+            return !(f.ready());
+        } catch(Exception e){}
+        return false;//because we don't want the JVM to freak out on us!
+    }
+    private java.io.BufferedReader file_read(String path){
+        java.io.File input_file = new java.io.File(path);
+        if(!input_file.canRead()) return null;
+        try{
+            //there should be no exceptions thrown, as we know that the 
+            //FileReader's input is readable (and thus also exists by the 
+            //function's specification)
+
+            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(input_file));
+            return br;
+        } catch(Exception e){}
+        return null;
+        //but in case if anything goes haywire, and to make javac happy.
+    }
+    private String file_readline(java.io.BufferedReader f){
+        //assertions
+        if(!(f!=null)) throw new AssertionError("requires::native function::<file>::string file_readline(file_t f)::f!=NULL");
+        if(!(!file_eof(f))) throw new AssertionError("requires::native function::<file>::string file_readline(file_t f)::!file_eof(f)");
+        try{
+            return f.readLine();
+        } catch(Exception e){}
+        throw new AssertionError("prompt::native function::<file>::string file_readline(file_t f)::UNKNOWN IO EXCEPTION");
+    }
+\\$$END
+
+\\$$BEGIN<conio>
+    \\$$PRE
+        \\#LOAD<INTERFACE>
+            <name:print>        <ret:void>    <params:string>
+            <name:println>      <ret:void>    <params:string>
+            <name:printint>     <ret:void>    <params:int>
+            <name:printbool>    <ret:void>    <params:bool>
+            <name:printchar>    <ret:void>    <params:char>
+            <name:readline>     <ret:string>  <params:>
+            <name:error>        <ret:void>    <params:string>
+        \\#END<REMOVE>
+    \\$$END
+
+    //void __c0ffi_eof(c0_value *)  
+    //lol what does this ^ do?
+
+    private void error(String s){
+        System.err.println(s);
+        System.exit(0);
+    }
+    private void print(String s){
+        System.out.print(s);
+    }
+    private void printbool(boolean b){
+        System.out.print(b);
+    }
+    private void printchar(char c){
+        System.out.print(c);
+    }
+    private void printint(int i){
+        System.out.print(i);
+    }
+    private void println(String s){
+        System.out.println(s);
+    }
+    //I was thinking about putting a scanner about here, so we don't have to 
+    //re-initialize the scanner each time. But what-the hey. I don't think it will 
+    //have THAT much of an impact...
+
+    private java.util.Scanner $$scan$$ = new java.util.Scanner(System.in);
+    private String readline(){
+        return $$scan$$.nextLine();
+    }
+\\$$END
+
+\\$$BEGIN<args>
+    \\$$PRE
+        \\#LOAD<STRUCT>
+            <struct args {
+                int argc;
+                string[] argv;
+            };>
+        \\#END<KEEP>
+        \\#LOAD<TYPEDEF><struct args* args_t>\\#END<KEEP>
+        \\#LOAD<INTERFACE>
+            <name:args_flag>    <ret:void>    <params:string, bool*>
+            <name:args_int>     <ret:void>    <params:string, int*>
+            <name:args_string>  <ret:void>    <params:string, string*>
+            <name:args_parse>   <ret:args_t>  <params:>
+        \\#END<REMOVE>
+        \\#LOAD<POINTER>
+            <type:int>
+            <type:string>
+            <type:bool>
+            <type:struct args>
+        \\#END<KEEP>
+    \\$$END
+
+    private void args_flag(String name, $bool$1 ptr){
+        if(!(ptr != null)){ throw new AssertionError("requires::native function::<args>::void args_flag(string name, bool* ptr)::ptr != NULL");}
+        if(!(!name.isEmpty())){ throw new AssertionError("requires::native function::<args>::void args_flag(string name, bool* ptr)::string_length(name)>0");}
+        $$$args_pointers$$$.put(name, ptr);
+    }
+    private void args_int(String name, $int$1 ptr){
+        if(!(ptr != null)){ throw new AssertionError("requires::native function::<args>::void args_int(string name, int* ptr)::ptr != NULL");}
+        if(!(!name.isEmpty())){ throw new AssertionError("requires::native function::<args>::void args_int(string name, int* ptr)::string_length(name)>0");}
+        $$$args_pointers$$$.put(name, ptr);
+    }
+    private $args$1 args_parse(){
+        $args$1 $$$result$$$ = new $args$1();
+        java.util.concurrent.LinkedBlockingQueue<String> unrecognized = new java.util.concurrent.LinkedBlockingQueue<String>();
+        tag:for(int i = 0; i < $$$ARGS$$$.p.argc; i++){
+            String name = $$$ARGS$$$.p.argv[i];
+            Object ptr = $$$args_pointers$$$.remove(name);
+            if(ptr == null){//if there is no pointer to the given arg
+                unrecognized.add($$$ARGS$$$.p.argv[i]);
+                continue tag;
+            } if(ptr instanceof $int$1){
+                i++;//the next value in the array
+                if(i == $$$ARGS$$$.p.argc) 
+                    throw new AssertionError("prompt::native function::<args>::args_t args_parse()::The \""+name+"\" arg requires an int; no values found after"+name+".");
+                    //we've met the end so we can't parse any more
+                try{
+                    int iint = Integer.parseInt($$$ARGS$$$.p.argv[i]);
+                    (($int$1)ptr).p = iint;
+                } catch(Exception e){
+                    throw new AssertionError("prompt::native function::<args>::args_t args_parse()::\""+$$$ARGS$$$.p.argv[i]+"\" is not a valid integer.\ninvalid command line argument\nAbort ");
+                }
+
+            } else if(ptr instanceof $string$1){
+                i++; //the next value in the array
+                if(i == $$$ARGS$$$.p.argc) 
+                    throw new AssertionError("prompt::native function::<args>::args_t args_parse()::The \""+name+"\" arg requires an string; no values found after"+name+".");
+                (($string$1)ptr).p = $$$ARGS$$$.p.argv[i];
+            } else if(ptr instanceof $bool$1){
+                (($bool$1)ptr).p = true;
+            } //anything beyond this should NOT happen. If it does, it will be hilarious.
+            if(!($$$result$$$ != null)){ throw new AssertionError("ensures::native function::<args>::args_t args_parse()::dude whut.");}
+        }
+        $$$result$$$.p.argv = new String[unrecognized.size()];
+        $$$result$$$.p.argc = 0;
+        while(!unrecognized.isEmpty()){
+            $$$result$$$.p.argv[$$$result$$$.p.argc] = unrecognized.poll();
+            $$$result$$$.p.argc++;
+        }
+        if(!($$$result$$$ != null)){ throw new AssertionError("ensures::native function::<args>::args_t args_parse()::\\result != NULL");}
+        if(!($$$result$$$.p.argc >= 0)){ throw new AssertionError("ensures::native function::<args>::args_t args_parse()::\\result->argc >= 0");}
+        if(!($$$result$$$.p.argc == $$$result$$$.p.argv.length)){ throw new AssertionError("ensures::native function::<args>::args_t args_parse()::\\result->argc == \\length(\\result->argv)");}
+        return $$$result$$$;
+    }
+    private void args_string(String name, $string$1 ptr){
+        if(!(ptr != null)){ throw new AssertionError("requires::native function::<args>::void args_string(string name, string* ptr)::ptr != NULL");}
+        if(!(!name.isEmpty())){ throw new AssertionError("requires::native function::<args>::void args_string(string name, string* ptr)::string_length(name)>0");}
+        $$$args_pointers$$$.put(name, ptr);
+    }
+\\$$END
+
+//todo - figure out what this does. 
+/*\\$$BEGIN<curses>
+c0_value __c0ffi_c_addch(c0_value *)
+c0_value __c0ffi_c_cbreak(c0_value *)
+c0_value __c0ffi_c_curs_set(c0_value *)
+c0_value __c0ffi_c_delch(c0_value *)
+c0_value __c0ffi_c_endwin(c0_value *)
+c0_value __c0ffi_c_erase(c0_value *)
+c0_value __c0ffi_c_getch(c0_value *)
+c0_value __c0ffi_c_initscr(c0_value *)
+c0_value __c0ffi_c_keypad(c0_value *)
+c0_value __c0ffi_c_move(c0_value *)
+c0_value __c0ffi_c_noecho(c0_value *)
+c0_value __c0ffi_c_refresh(c0_value *)
+c0_value __c0ffi_c_subwin(c0_value *)
+c0_value __c0ffi_c_waddch(c0_value *)
+c0_value __c0ffi_c_waddstr(c0_value *)
+c0_value __c0ffi_c_wclear(c0_value *)
+c0_value __c0ffi_c_werase(c0_value *)
+c0_value __c0ffi_c_wmove(c0_value *)
+c0_value __c0ffi_c_wrefresh(c0_value *)
+c0_value __c0ffi_c_wstandend(c0_value *)
+c0_value __c0ffi_c_wstandout(c0_value *)
+c0_value __c0ffi_cc_getbegx(c0_value *)
+c0_value __c0ffi_cc_getbegy(c0_value *)
+c0_value __c0ffi_cc_getmaxx(c0_value *)
+c0_value __c0ffi_cc_getmaxy(c0_value *)
+c0_value __c0ffi_cc_getx(c0_value *)
+c0_value __c0ffi_cc_gety(c0_value *)
+c0_value __c0ffi_cc_highlight(c0_value *)
+c0_value __c0ffi_cc_key_is_backspace(c0_value *)
+c0_value __c0ffi_cc_key_is_down(c0_value *)
+c0_value __c0ffi_cc_key_is_enter(c0_value *)
+c0_value __c0ffi_cc_key_is_left(c0_value *)
+c0_value __c0ffi_cc_key_is_right(c0_value *)
+c0_value __c0ffi_cc_key_is_up(c0_value *)
+c0_value __c0ffi_cc_wboldoff(c0_value *)
+c0_value __c0ffi_cc_wboldon(c0_value *)
+c0_value __c0ffi_cc_wdimoff(c0_value *)
+c0_value __c0ffi_cc_wdimon(c0_value *)
+c0_value __c0ffi_cc_wreverseoff(c0_value *)
+c0_value __c0ffi_cc_wreverseon(c0_value *)
+c0_value __c0ffi_cc_wunderoff(c0_value *)
+c0_value __c0ffi_cc_wunderon(c0_value *)
+\\$$END*/

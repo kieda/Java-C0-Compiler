@@ -1,0 +1,2 @@
+test.CompilerAPITest
+test.DynamicJavaSourceCodeObject

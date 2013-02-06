@@ -1,0 +1,2 @@
+no pervious knowledge of compilers was used on this project, and no algorithms 
+were looked up except for the shunting yard algorithm.

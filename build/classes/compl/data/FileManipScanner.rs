@@ -1,0 +1,10 @@
+compl.data.C0Scanner$CN
+compl.data.C0Scanner$2
+compl.data.C0Scanner
+compl.data.C0Scanner$3
+compl.data.Blah
+compl.data.C0Scanner$1
+compl.data.C0Scanner$3$1
+compl.data.C0Scanner$3$1$1
+compl.data.C0Scanner$Node
+compl.data.FileManipScanner
