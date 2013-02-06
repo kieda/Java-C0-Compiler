@@ -20,3 +20,6 @@ Intent:<br>
         <li> greater ability to be used on personal computers
     </ul>
 </ul>
+
+
+Version v.8 (almost finished), 1200+ lines of code
