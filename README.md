@@ -6,7 +6,6 @@ What is this?<br>
 A compiler of C0 code, written in java, parsed to java bytecode.<br>
 More about C0 : http://c0.typesafety.net
 
-<br><br>
 Intent:<br>
 -----------------
 <ul>
