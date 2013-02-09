@@ -1,6 +1,20 @@
-/*GARBAGEGARBAGE*/
-# use "idea"
-sadflshd
-sadfhlksdf
-//sadfg sahdfl
-hello world!
+struct sadf{
+    int a;
+    int b;
+};
+
+typedef int a;
+typedef a* b;
+
+bool is_uniquestring[(] A, int n){
+    //as the incoming array must be sorted as a requirement,
+    //it is logical to just test the neighboring strings 
+    //against one another to see if they are the same, as 
+    //same strings will be neighbors in a sorted string array.
+    for(int i = 0; i < n-1;)
+    //@loop_invariant i >=0 && i < n;
+    {
+        if(string_equal(A[i], A[++i])) return false;
+    }
+    return true;
+}

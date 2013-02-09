@@ -4,7 +4,7 @@
  */
 package test;
 
-import com.kieda.data_structures.StackSet;
+import org.kieda.data_structures.StackSet;
 
 /**
  *

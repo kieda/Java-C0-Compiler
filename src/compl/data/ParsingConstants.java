@@ -42,4 +42,5 @@ public interface ParsingConstants {
     final static int CONTINUE = 122;
     
     final static int UNKNOWN_CHAR = 55;
+    final static int INDIVIDUAL_CHAR = 12347;
 }

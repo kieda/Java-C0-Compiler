@@ -4,7 +4,7 @@
  */
 package test;
 
-import com.kieda.data_structures.Stack;
+import org.kieda.data_structures.Stack;
 import compl.data.FileManip;
 import compl.data.FileManipScanner;
 import java.awt.image.BufferedImage;
@@ -45,7 +45,7 @@ public class FileTest {
     public static void readFileTest(){
         //we want to test what a file that contains "\n" will actually return.
         File f = new File("./src/readFileTest");
-        String s = com.kieda.util.ReadFile.read(f);
+        String s = org.kieda.util.ReadFile.read(f);
         String[] ss = s.split("\n");
         System.out.println(Arrays.toString(ss));
     }

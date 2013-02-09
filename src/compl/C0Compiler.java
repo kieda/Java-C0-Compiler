@@ -1,12 +1,12 @@
 package compl;
 
-import com.kieda.data_structures.Stack;
+import org.kieda.data_structures.Stack;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
-import com.kieda.util.ReadFile;
-import com.kieda.util.console.Console;
+import org.kieda.util.ReadFile;
+import org.kieda.util.console.Console;
 import compl.etc.CompileJava;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

@@ -1,7 +1,7 @@
 package compl.data;
 
-import com.kieda.search.Search;
-import com.kieda.typesafe.AssertionMethod;
+import org.kieda.search.Search;
+import org.kieda.typesafe.AssertionMethod;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;

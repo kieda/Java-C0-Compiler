@@ -2,13 +2,13 @@ package test;
 
 
 
-import com.kieda.search.Search;
+import org.kieda.search.Search;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.StringReader;
 import java.util.ArrayList;
-import com.kieda.typesafe.AssertionMethod;
+import org.kieda.typesafe.AssertionMethod;
 
 class FMTest{
     public static FileManip2.TextPosition pos(int l, int c){

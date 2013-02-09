@@ -4,7 +4,9 @@
  */
 package compl.etc;
 
-import com.kieda.util.k_error.Err;
+import compl.data.FileManipScanner;
+import compl.data.TokenList;
+import org.kieda.util.k_error.Err;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -197,11 +199,11 @@ public class Parsers {
             case "void":{
                 Err._assert(tokens.isEmpty(), Err.BASIC_EXITABLE_ERROR, "void type cannot be in an array or a pointer.");
                 return Types.VOID;
-            } 
+            }
             default:
                 String $first = new String(first);
                 base_type = null;
-                C0TypeDef_parsed ctd = typedefs.get(first);
+                C0TypeDef_parsed ctd = typedefs.get(first); 
                 Err._assert(ctd != null, Err.BASIC_EXITABLE_ERROR, "unknown type: " + $first);
                 //replace the first type with the typedef
                 base_type = ctd.type;
@@ -224,4 +226,6 @@ public class Parsers {
         }
         return base_type;
     }
+    
+    
 }

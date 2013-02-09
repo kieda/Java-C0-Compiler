@@ -4,8 +4,8 @@
  */
 package compl.data;
 
-import com.kieda.data_structures.Queue;
-import com.kieda.data_structures.character.CharStack;
+import org.kieda.data_structures.Queue;
+import org.kieda.data_structures.character.CharStack;
 import java.util.Iterator;
 
 /**

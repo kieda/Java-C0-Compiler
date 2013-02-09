@@ -3,8 +3,8 @@
  * and open the template in the editor.
  */
 package test;
-import com.kieda.core.AbstractCore;
-import com.kieda.graphics.Renderable;
+import org.kieda.core.AbstractCore;
+import org.kieda.graphics.Renderable;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
@@ -12,7 +12,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.util.Scanner;
 import javax.swing.JFrame;
-import ui.Disp;
+import org.kieda.ui.Disp;
 /**
  *
  * @author kieda

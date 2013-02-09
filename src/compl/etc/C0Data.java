@@ -4,12 +4,16 @@
  */
 package compl.etc;
 
+import compl.data.FileManipScanner;
+import compl.data.TokenList;
+
 /**
  *
  * @author kieda
  */
 /*********************************Data in C0***********************************/
 public class C0Data implements Method.ExpressionElement<C0Data, C0Data>{    
+    
     final SmallType representation;
         //the representation of the C0 data. A LargeType (Struct) is represented
         //by a pointer

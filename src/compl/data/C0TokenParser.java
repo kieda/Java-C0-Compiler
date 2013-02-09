@@ -182,18 +182,18 @@ final Node head = new Node(){
             /**todo: strings/chars**/
             return -CONTINUE_AND_RECORD;
         //single chars:
-        case'{': type(BRACE_LEFT);          return -EXIT_SUCCESSFUL;
-        case'[': type(BRACKET_LEFT);        return -EXIT_SUCCESSFUL;
-        case'(': type(PARENTHESES_LEFT);    return -EXIT_SUCCESSFUL;
-        case';': type(SEMI_COLON);          return -EXIT_SUCCESSFUL;
-        case'?': type(QUESTION_MARK);       return -EXIT_SUCCESSFUL;
-        case',': type(COMMA);               return -EXIT_SUCCESSFUL;
-        case'}': type(BRACE_RIGHT);         return -EXIT_SUCCESSFUL;
-        case']': type(BRACKET_RIGHT);       return -EXIT_SUCCESSFUL;
-        case')': type(PARENTHESES_RIGHT);   return -EXIT_SUCCESSFUL;
-        case':': type(COLON);               return -EXIT_SUCCESSFUL;
-        case'.': type(STRUCT_SELECT);       return -EXIT_SUCCESSFUL;
-        case'~': type(BITWISE_NOT);         return -EXIT_SUCCESSFUL;
+        case'{': type(BRACE_LEFT);          return -INDIVIDUAL_CHAR;
+        case'[': type(BRACKET_LEFT);        return -INDIVIDUAL_CHAR;
+        case'(': type(PARENTHESES_LEFT);    return -INDIVIDUAL_CHAR;
+        case';': type(SEMI_COLON);          return -INDIVIDUAL_CHAR;
+        case'?': type(QUESTION_MARK);       return -INDIVIDUAL_CHAR;
+        case',': type(COMMA);               return -INDIVIDUAL_CHAR;
+        case'}': type(BRACE_RIGHT);         return -INDIVIDUAL_CHAR;
+        case']': type(BRACKET_RIGHT);       return -INDIVIDUAL_CHAR;
+        case')': type(PARENTHESES_RIGHT);   return -INDIVIDUAL_CHAR;
+        case':': type(COLON);               return -INDIVIDUAL_CHAR;
+        case'.': type(STRUCT_SELECT);       return -INDIVIDUAL_CHAR;
+        case'~': type(BITWISE_NOT);         return -INDIVIDUAL_CHAR;
             
         //integers that do not start with zero
         case'1':case'2':case'3':case'4':case'5':case'6':case'7':case'8':case'9':

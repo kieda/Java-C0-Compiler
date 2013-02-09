@@ -4,17 +4,16 @@
  */
 package compl.etc;
 
-import com.kieda.data_structures.Queue;
-import com.kieda.data_structures.Stack;
-import com.kieda.data_structures.StackSet;
-import com.kieda.data_structures.Trie;
+import org.kieda.data_structures.Queue;
+import org.kieda.data_structures.Stack;
+import org.kieda.data_structures.StackSet;
+import org.kieda.data_structures.Trie;
 import compl.data.C0Scanner;
 import compl.data.FileManip;
 import compl.data.FileManipScanner;
+import compl.data.TokenList;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 import test.data_types.various.Tuple2;
 
 /**
@@ -641,13 +640,13 @@ public class CompileC0 implements compl.data.Types{
                 if(parentheses_count < 0){
                     //log an error.
                     parentheses_count++;
-                    ranges_to_remove.push(
-                        new FileManip.Range(
-                                tok.position, 
-                                new FileManip.TextPosition(
-                                    tok.position.getLine(), 
-                                    tok.position.getColumn()+1
-                                )));
+//                    ranges_to_remove.push(
+//                        new FileManip.Range(
+//                                tok.position, 
+//                                new FileManip.TextPosition(
+//                                    tok.position.getLine(), 
+//                                    tok.position.getColumn()+1
+//                                )));
                     assert parentheses_count == 0;
                 } break;
             }
@@ -725,7 +724,8 @@ public class CompileC0 implements compl.data.Types{
                 case PARENTHESES_LEFT: if(brace_count == 0) parentheses_count++; break;
                 case PARENTHESES_RIGHT: if(brace_count == 0) parentheses_count--;
                 if(parentheses_count < 0){
-                    assert false;
+                    parentheses_count++;
+//                    assert false;
                     //should have been handled.
                 } break;
             }
@@ -1099,10 +1099,11 @@ public class CompileC0 implements compl.data.Types{
     //here we scan and place unparsed methods and interfaces from the main file.
     //this is the last stage for grabbing raw data.
     private static void methods_and_interfaces(){
+        
         //scan the file for methods and adds them to the trie of interfaces
         FileManipScanner scanner = new FileManipScanner(main);
         //we scan main.
-        FileManipScanner.C0Token tok = scanner.nextToken();
+        FileManipScanner.C0Token tok ;//=/;scanner.nextToken();
             //the current token.
         Stack<FileManip.Range> ranges_to_remove = new Stack<FileManip.Range>();
         while((tok = scanner.nextToken()) != null){
@@ -1142,21 +1143,149 @@ public class CompileC0 implements compl.data.Types{
                                 grab_anonymous_syntax(scanner, tok, ranges_to_remove, main.subRange(new FileManip.Range(begin_name, scanner.getCurrentPos())));
                                 //log error: expected paramters before a 
                                 //block of syntax.
-                                break;
+                                break name_loop;
                             } case PARENTHESES_LEFT:{
                                 //should be the beginning of parameters.
                                 FileManip name_and_return_t = main.subRange(new FileManip.Range(begin_name, tok.position));
-                                
+                                FileManip params;
+                                FileManip.TextPosition begin_params = new FileManip.TextPosition(tok.position.getLine(), tok.position.getColumn()+1);
+                                List<FileManipScanner.C0Token> assertions = new ArrayList<>();
+                                int parentheses_count = 1;
                                 //we have a parentheses
-                                while(true){
+                                ll:while(true){
                                     if((tok = scanner.nextToken())==null){
                                         break name_loop;
                                         //we actually were not in some syntax, we actually
                                         //were just in a chunk of text that had 
                                         //parentheses, but did not contain syntax
                                     }
-                                    
+                                    switch(tok.getTokenType()){
+                                        case PARENTHESES_RIGHT: 
+                                            parentheses_count--;
+                                            if(parentheses_count==0){
+                                                
+                                                //semicolon?
+                                                //assertions?
+                                                params = main.subRange(new FileManip.Range(begin_params, tok.position));
+                                                //the params
+                                                while(true){
+                                                    tok = scanner.nextToken();
+                                                    if(tok == null){
+                                                        //log error: expected {
+                                                        break name_loop;
+                                                        //break the name loop, these tokens will be left over to log errors over.
+                                                    }
+                                                    switch(tok.getTokenType()){
+                                                        case BRACE_LEFT:{
+                                                            //we enter a method 
+                                                            tok = scanner.nextToken();//after the {
+                                                            break ll;
+                                                        } case SEMI_COLON:{
+                                                            //we enter an interface
+                                                            ranges_to_remove.push(
+                                                            new FileManip.Range(
+                                                                begin_name,
+                                                                tok.position.getLine(),
+                                                                tok.position.getColumn()+1
+                                                            ));
+                                                            //we add it to the list of interfaces and exit.
+                                                            unparsed_interfaces.add(new C0Interface_completely_unparsed(name_and_return_t, params, assertions));
+                                                            
+                                                            break name_loop;
+                                                        } case BLOCK_COMMENT:case LINE_COMMENT:{
+                                                            //undefined yet. we add too the list of assertions, and go in a loop
+                                                            assertions.add(tok);
+                                                            break;
+                                                        } default: 
+                                                            //throw error: expected {, ;, or an assertion
+                                                            break name_loop;
+                                                    }
+                                                }
+                                                
+                                            }
+                                            break;
+                                        case PARENTHESES_LEFT: 
+                                            parentheses_count++;
+                                            break;
+                                        case BRACE_LEFT:
+                                            //log error: ) expected
+                                            params = main.subRange(new FileManip.Range(begin_params, tok.position.getLine(), tok.position.getColumn()+1));
+                                            break ll;
+                                        case BRACE_RIGHT: assert false;
+                                        
+                                    }
                                 }
+                                
+                                FileManip.TextPosition syntax_begin = tok.position;
+                                
+                                
+//                                System.out.println(name_and_return_t);
+//                                System.out.println(params);
+                                int brace_count = 1;
+                                loop:while(true){
+                                    if((tok = scanner.nextToken()) == null){
+                                        //we managed to end the file before we could find 
+                                        //an ending of the syntax. 
+                                        //Make the internals, and delete till the end of 
+                                        //the file.
+                                        
+                                        //throw error
+                                        unparsed_methods.add(
+                                                new C0Method_completely_unparsed(name_and_return_t, params, assertions, 
+                                                    main.subRange(new FileManip.Range(
+                                                        syntax_begin.getLine(),
+                                                        syntax_begin.getColumn()+1,
+                                                        //right after the beginning of the 
+                                                        //syntax till right before the end.
+                                                        main.getEndPosition()
+                                                )))
+                                            );
+                                        //remove all of it.
+                                        ranges_to_remove.push(
+                                                new FileManip.Range(
+                                                    begin_name,
+                                                    main.getEndPosition()
+                                                ));
+                                        break;
+                                    }
+                                    switch(tok.getTokenType()){
+                                        case BRACE_RIGHT:{
+                                            brace_count--;
+                                            if(brace_count==0){
+                                                //we should exit. We add a new to the 
+                                                //bad_interfaces, delete from beginning till end, 
+                                                //then exit.
+
+
+                                                //this is just a block of syntax, so all we can 
+                                                //do is parse the internals.
+                                                unparsed_methods.add(
+                                                        new C0Method_completely_unparsed(name_and_return_t, params, assertions, 
+                                                            main.subRange(new FileManip.Range(
+                                                                syntax_begin.getLine(),
+                                                                syntax_begin.getColumn()+1,
+                                                                //right after the beginning of the 
+                                                                //syntax till right before the end.
+                                                                tok.position
+                                                        )))
+                                                    );
+                                                //remove the entire syntax.
+                                                ranges_to_remove.push(
+                                                        new FileManip.Range(
+                                                            begin_name,
+                                                            tok.position.getLine(),
+                                                            tok.position.getColumn()+1
+                                                        ));
+                                                break loop;
+                                            }
+                                            break;
+                                        } case BRACE_LEFT:{
+                                            brace_count++;
+                                            break;
+                                        }
+                                    }
+                                }
+                                
                                 break;
                             }case BRACE_RIGHT: assert false;
                                 //cannot happen; we should be outside of all 
@@ -1169,8 +1298,126 @@ public class CompileC0 implements compl.data.Types{
                 //left over.
             }
         }
+       while(!ranges_to_remove.isEmpty()){
+           main.delete(ranges_to_remove.pop());
+       }
+    }
+    //should input a valid c0 type.
+    private static C0Data parse_c0_type(TokenList info){     
+        C0Data base_type = null;
+        FileManipScanner.C0Token tok;
+        boolean is_void = false;
+        stage1: while((tok = info.next()) != null){//iterable!
+            switch(tok.text){
+                case "struct":{
+                    if((tok = info.next()) == null){
+                        //throw error: struct needs a name
+                        info.rewind(); return null;
+                    }
+                    C0Struct c0s;
+                    {
+                        String struct_name = tok.text;
+                        if((c0s = structs_unparsed.get(struct_name)) != null
+                                || (c0s = structs_parsed.get(struct_name)) != null){
+                            //c0s should be defined and non-null
+                            
+                            assert c0s != null;
+                            
+                            base_type = c0s;
+                            break stage1;
+                        } else{
+                            //throw error; we could not find the base type.
+                            info.rewind(); return null;
+                        }
+                    }
+                }case "int":{
+                    base_type = Types.INT;
+                    break stage1;
+                }case "bool":{
+                    base_type = Types.BOOL;
+                    break stage1;
+                }case "string":{
+                    base_type = Types.STRI;
+                    break stage1;
+                }case "char":{
+                    base_type = Types.CHAR;
+                    break stage1;
+                }case "void":{
+                    base_type = Types.VOID;
+                    is_void = true;
+                    break stage1;
+                } default:{
+                    C0TypeDef_unparsed ctd = typedefs_unparsed.get(tok.text);
+                    if(ctd != null){
+                        //we don't hae atypedef already parsed.
+                        base_type = parse_c0_type(new TokenList(ctd.data));
+
+                        //we should optimize this later to remove things that 
+                        //are already parsed.
+                        
+                        
+                        //we will not go into an infinite loop, as we made sure,
+                        //while looking up the typedef, that the typedef was not 
+                        //already defined.
+                        break stage1;
+                    } else{
+                        C0TypeDef_parsed ct = typedefs_parsed.get(tok.text);
+                        if(ct != null){
+                             base_type = ct.type;break stage1;
+                        }
+                        else{
+                            //throw error
+                            info.rewind(); return null;
+                        }
+                    }
+                }
+            }
+        }
+        //we exit stage 1 knowing what our base type is.
+        assert base_type != null;
+        
+        //we then look for any extra modifications.
+        
+        boolean brak = false;//the number of brakets
+        while((tok = info.next()) != null){
+            //should never execute if the type is null
+            if(is_void) {
+                //throw an error: unkown data type
+                info.rewind();return null;
+            }
+            switch(tok.getTokenType()){
+                case BRACKET_LEFT:{//   [
+                     if(brak){
+                        //throw error
+                        info.rewind();return null;
+                    } brak = true; break;
+                }case BRACKET_RIGHT:{// ]
+                    if(!brak){
+                        //throw error
+                        info.rewind();return null;
+                    } brak = false; base_type = Types.ARRAY(base_type); break;
+                }case MULTIPLY | POINTER_TYPE:{// *
+                    if(brak){
+                        //throw error
+                        info.rewind();return null;
+                    } base_type = Types.POINTER(base_type); break;
+                }default:{
+                    //throw error
+                    //should be only *, [, or ] after a type.
+                    info.rewind();return null;
+                }
+            }
+        }
+        
+        info.rewind();//goes back to the list
+        return base_type;
     }
     private static void parse_typedefs(){
+        for(Map.Entry<String, C0TypeDef_unparsed>  e: typedefs_unparsed.entrySet()){
+            C0Data val = parse_c0_type(new TokenList(e.getValue().data));
+            typedefs_parsed.put(e.getKey(), new C0TypeDef_parsed(e.getKey(), val));
+        }
+        typedefs_unparsed.clear();
     }
     private static void typedefs(){
         //   Next, we search for typedefs. If the typedef infringes on 
@@ -1212,7 +1459,8 @@ public class CompileC0 implements compl.data.Types{
                     if(brace_count == 0){
                         parentheses_count--;
                         if(parentheses_count < 0){
-                            assert false;
+                            parentheses_count++;
+//                            assert false;
                         }
                     }
                     break;
@@ -1226,7 +1474,6 @@ public class CompileC0 implements compl.data.Types{
                 FileManip.TextPosition begin_delete = tok.position;
                     //the beginning of the deletion point, right before the word 
                     //typedef.
-                
                 
                 if((tok = fms.nextToken()) == null){
                     //unexpected end of file
@@ -1257,6 +1504,7 @@ public class CompileC0 implements compl.data.Types{
                         //delete the token from main.
                         break fail;
                     }
+                    
                     //something here about {, (, }, and )
                     switch(tok.getTokenType()){
                         case BRACE_LEFT:{
@@ -1304,6 +1552,9 @@ public class CompileC0 implements compl.data.Types{
                             if(reserved_words.contains(tok_pre.text)){
                                 //log error: typedef name "tok_pre.text" is a reserved word.
                                 break dw;
+                            } if(typedefs_unparsed.containsKey(tok_pre.text)){
+                                //log error: typedef can only be named once.
+                                break dw;
                             }
                             if(struct_interfaces.containsKey(tok_pre.text)){
                                 //log error: typedef name "tok_pre.text" is already the name of a struct.
@@ -1320,8 +1571,8 @@ public class CompileC0 implements compl.data.Types{
                                 }
                             //put a new unparsed typedef.
                             typedefs_unparsed.put(
-                                    tok_pre.text, 
-                                    new C0TypeDef_unparsed(tok_pre.text, main.subRange(new FileManip.Range(begin_body, tok.position)))
+                                    tok_pre.text,
+                                    new C0TypeDef_unparsed(tok_pre.text, main.subRange(new FileManip.Range(begin_body, tok_pre.position)))
                                 );
                             break dw;
                         }
@@ -1341,6 +1592,13 @@ public class CompileC0 implements compl.data.Types{
     private static void parse_methods(){
     }
     private static void parse_structs(){
+        for(C0Struct_unparsed e: structs_unparsed.list()){
+            TokenList tl = new TokenList(e.internals);
+            FileManipScanner.C0Token tok;
+            while((tok = tl.next()) != null){
+                
+            }
+        }
     }
     
     //operations on the data types
@@ -1437,12 +1695,14 @@ public class CompileC0 implements compl.data.Types{
         
         System.out.println("finding typedefs:");
         typedefs_unparsed = new HashMap<String, C0TypeDef_unparsed>();
-        typedefs();     
+        typedefs();
             //find typedefs. We do not parse the typedef actual types, in case 
             //there is a typedef that points to a later typedef. We will parse 
             //the names here, and parse the actual type later.
-        
-        methods_and_interfaces();   
+        unparsed_methods = new ArrayList<>();
+        unparsed_interfaces = new ArrayList<>();
+        bad_methods = new ArrayList<>();
+        methods_and_interfaces();
             //find interfaces. We scan for these separate from the methods in 
             //case the user has an interface that has certain parameters, but 
             //the user has a later implementation of the method (or a method 
@@ -1458,15 +1718,18 @@ public class CompileC0 implements compl.data.Types{
         
             //we do not scan the internals of the method, in case the method is 
             //used later on.
-        
+//        System.out.println(unparsed_methods);
+//        System.out.println(unparsed_interfaces);
+//        System.out.println(bad_methods);
         //all of the leftovers. Should be empty if the file is correct.
         scan_scraps();
         
-        
-        parse_typedefs();
-        
+        structs_parsed = new Trie<>();
         parse_structs();//parse the info within the structs.
             //convert typedefs, C0 keywords to Java keywords as we go.
+        
+        typedefs_parsed = new HashMap<>();
+        parse_typedefs();
         
         parse_interfaces();
         
@@ -1477,7 +1740,7 @@ public class CompileC0 implements compl.data.Types{
             //take our information we gathered about structs, interfaces, 
             //imports, pointers, methods, etc, and put it into one large java 
             //file.
-        return main.toString();
+        return main + "";
     }
 }
 
@@ -1494,6 +1757,8 @@ public class CompileC0 implements compl.data.Types{
 
 class Test{
     public static void main(String[] args){
-        System.out.println(CompileC0.compile(new File("./src/"), "a", "Test.c0"));
+        CompileC0.compile(new File("./src/"), "a", "Test2.c0");
+//        System.out.println("##"+);
+        
     }
 }

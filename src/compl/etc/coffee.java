@@ -1,6 +1,6 @@
 package compl.etc;
 
-import com.kieda.util.error.OutOfMasksError;
+import org.kieda.util.error.OutOfMasksError;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;

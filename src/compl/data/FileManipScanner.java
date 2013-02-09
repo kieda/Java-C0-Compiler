@@ -245,10 +245,9 @@ public class FileManipScanner {
 //                        System.out.println(c);
                         n+=c;
                         setNextCharPosition();
-                        
-                        
                         break bra;
                     case C0TokenParser.EXIT_UNSUCCESSFUL: break bra;
+                    case C0TokenParser.INDIVIDUAL_CHAR:
                     case C0TokenParser.UNKNOWN_CHAR:
 //                        retnexChar = true;
                         FileManip.TextPosition tp = new FileManip.TextPosition(curr_pos.getLine(), curr_pos.getColumn());
@@ -388,18 +387,18 @@ public class FileManipScanner {
         }
         private C0Token(String text, FileManip.TextPosition position){
             super(text, position);
-            RECOGNIZED_WORD_TYPE = ANY | UNKNOWN_TYPE;;
+            RECOGNIZED_WORD_TYPE = ANY | UNKNOWN_TYPE;
         }
     }
 }
 class Blah{
     public static void main(String[] args){
-        FileManip fm1 = new FileManip(new File("./src/Test.c0"));
+        FileManip fm1 = new FileManip(new File("./src/Test2.c0"));
         FileManipScanner fms = new FileManipScanner(fm1);
         FileManipScanner.Word w;
         String end = "";
         while((w = fms.nextToken()) != null){
-            end += w.toString() + "\n";
+            end += w + "\n";
         }
         System.out.println(end);
          System.exit(0);

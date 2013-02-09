@@ -7,9 +7,17 @@ package compl.data;
 /**
  * @author kieda
  */
-class s implements Types{
-    {
-        
+class s{
+    public int sadf(){
+        try{
+            while(3/0 == 3/0){
+            }
+            if(true)return 1;
+            
+            if(true)return 2;
+        }catch(Exception e){
+            
+        }throw new Error();
     }
 }
 public interface Types {

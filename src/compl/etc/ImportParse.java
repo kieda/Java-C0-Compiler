@@ -4,11 +4,11 @@
  */
 package compl.etc;
 
-import com.kieda.util.k_error.K_Error;
+import org.kieda.util.k_error.K_Error;
 import compl.data.FileManip;
 import compl.data.FileManipScanner;
-import com.kieda.util.k_error.Err;
-import com.kieda.util.k_error.ExitableError;
+import org.kieda.util.k_error.Err;
+import org.kieda.util.k_error.ExitableError;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
