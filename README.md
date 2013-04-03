@@ -22,4 +22,4 @@ Intent:<br>
 </ul>
 
 
-Version v.8 (almost finished)
+Version v.8 (almost in alpha), 12,000+ lines
