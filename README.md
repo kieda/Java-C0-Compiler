@@ -1,4 +1,9 @@
-Java_C0_Compiler
+Important Note  : Deprecated after making C0++, a compiler that goes directly to jvm bytecode
+C0++ will be released after my parter and I change the front-end a significant amount (to avoid other students searching for a 411 reference solution for C0)
+
+Older Readme:
+
+Java C0 Compiler
 ================
 
 What is this?<br>
@@ -22,5 +27,3 @@ Intent:<br>
 
 
 Version v.8 (almost in alpha)
-
-It's been pretty close to being finished for the longest time now... I just need to get re-motivated on the project to finish it up...
